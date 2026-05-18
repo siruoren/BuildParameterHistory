@@ -81,19 +81,25 @@ public class BuildParameterHistoryAction implements hudson.model.Action {
         String parameterName = req.getParameter("parameterName");
         String parameterValue = req.getParameter("parameterValue");
 
-        List<BuildParameterRecord> filteredRecords = getFilteredRecords(resultFilter, searchKeyword, parameterName, parameterValue);
+        StringBuilder redirectUrl = new StringBuilder(".");
+        boolean hasParams = false;
 
-        req.setAttribute("filteredRecords", filteredRecords);
-        req.setAttribute("resultFilter", resultFilter != null ? resultFilter : "");
-        req.setAttribute("searchKeyword", searchKeyword != null ? searchKeyword : "");
-        req.setAttribute("parameterName", parameterName != null ? parameterName : "");
-        req.setAttribute("parameterValue", parameterValue != null ? parameterValue : "");
-        req.setAttribute("hasActiveFilters",
-                (resultFilter != null && !resultFilter.trim().isEmpty() && !"ALL".equalsIgnoreCase(resultFilter))
-                || (searchKeyword != null && !searchKeyword.trim().isEmpty())
-                || (parameterName != null && !parameterName.trim().isEmpty())
-                || (parameterValue != null && !parameterValue.trim().isEmpty()));
+        if (resultFilter != null && !resultFilter.trim().isEmpty() && !"ALL".equalsIgnoreCase(resultFilter)) {
+            redirectUrl.append("?resultFilter=").append(resultFilter);
+            hasParams = true;
+        }
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            redirectUrl.append(hasParams ? "&" : "?").append("searchKeyword=").append(searchKeyword);
+            hasParams = true;
+        }
+        if (parameterName != null && !parameterName.trim().isEmpty()) {
+            redirectUrl.append(hasParams ? "&" : "?").append("parameterName=").append(parameterName);
+            hasParams = true;
+        }
+        if (parameterValue != null && !parameterValue.trim().isEmpty()) {
+            redirectUrl.append(hasParams ? "&" : "?").append("parameterValue=").append(parameterValue);
+        }
 
-        req.getView(this, "filterResults.jelly").forward(req, rsp);
+        rsp.sendRedirect2(redirectUrl.toString());
     }
 }

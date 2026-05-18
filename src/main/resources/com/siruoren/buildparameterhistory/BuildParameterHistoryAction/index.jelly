@@ -224,37 +224,37 @@
                             <label>${%Build Result}</label>
                             <select name="resultFilter">
                                 <j:if test="${resultFilter == 'ALL' or empty(resultFilter)}">
-                                    <option value="ALL" selected>${%All}</option>
+                                    <option value="ALL" selected="selected">${%All}</option>
                                 </j:if>
                                 <j:if test="${resultFilter != 'ALL' and not empty(resultFilter)}">
                                     <option value="ALL">${%All}</option>
                                 </j:if>
                                 <j:if test="${resultFilter == 'SUCCESS'}">
-                                    <option value="SUCCESS" selected>SUCCESS</option>
+                                    <option value="SUCCESS" selected="selected">SUCCESS</option>
                                 </j:if>
                                 <j:if test="${resultFilter != 'SUCCESS'}">
                                     <option value="SUCCESS">SUCCESS</option>
                                 </j:if>
                                 <j:if test="${resultFilter == 'FAILURE'}">
-                                    <option value="FAILURE" selected>FAILURE</option>
+                                    <option value="FAILURE" selected="selected">FAILURE</option>
                                 </j:if>
                                 <j:if test="${resultFilter != 'FAILURE'}">
                                     <option value="FAILURE">FAILURE</option>
                                 </j:if>
                                 <j:if test="${resultFilter == 'UNSTABLE'}">
-                                    <option value="UNSTABLE" selected>UNSTABLE</option>
+                                    <option value="UNSTABLE" selected="selected">UNSTABLE</option>
                                 </j:if>
                                 <j:if test="${resultFilter != 'UNSTABLE'}">
                                     <option value="UNSTABLE">UNSTABLE</option>
                                 </j:if>
                                 <j:if test="${resultFilter == 'ABORTED'}">
-                                    <option value="ABORTED" selected>ABORTED</option>
+                                    <option value="ABORTED" selected="selected">ABORTED</option>
                                 </j:if>
                                 <j:if test="${resultFilter != 'ABORTED'}">
                                     <option value="ABORTED">ABORTED</option>
                                 </j:if>
                                 <j:if test="${resultFilter == 'NOT_BUILT'}">
-                                    <option value="NOT_BUILT" selected>NOT_BUILT</option>
+                                    <option value="NOT_BUILT" selected="selected">NOT_BUILT</option>
                                 </j:if>
                                 <j:if test="${resultFilter != 'NOT_BUILT'}">
                                     <option value="NOT_BUILT">NOT_BUILT</option>
@@ -291,12 +291,12 @@
                                 ${%No build parameter records found.}
                             </j:when>
                             <j:otherwise>
-                                ${%Showing %d records, Total: %d records.}
+                                Showing ${displayRecords.size()} records, Total: ${records.size()} records.
                             </j:otherwise>
                         </j:choose>
                     </j:when>
                     <j:otherwise>
-                        ${%Filtered: %d records (Total: %d records).}
+                        Filtered: ${displayRecords.size()} records (Total: ${records.size()} records).
                     </j:otherwise>
                 </j:choose>
             </div>
@@ -363,7 +363,7 @@
                                                 <j:otherwise>
                                                     <j:forEach var="param" items="${record.parameters}" varStatus="status">
                                                         <div class="bph-param-item">
-                                                            <span class="bph-param-index">${%Param %d}</span>
+                                                            <span class="bph-param-index">Param ${status.index + 1}</span>
                                                             <span class="bph-param-name">${param.name}：</span>
                                                             <span class="bph-param-value">${param.value}</span>
                                                         </div>

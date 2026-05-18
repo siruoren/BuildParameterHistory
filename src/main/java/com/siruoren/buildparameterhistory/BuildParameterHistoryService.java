@@ -1,6 +1,7 @@
 package com.siruoren.buildparameterhistory;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.Job;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -8,11 +9,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,7 +21,6 @@ import jenkins.model.Jenkins;
 public class BuildParameterHistoryService {
 
     private static final Logger LOGGER = Logger.getLogger(BuildParameterHistoryService.class.getName());
-    private static final String STORAGE_DIR = "build-parameter-history";
     private static final String HISTORY_FILE = "param_history";
 
     private static BuildParameterHistoryService instance;
@@ -37,21 +35,17 @@ public class BuildParameterHistoryService {
         return instance;
     }
 
-    private File getStorageRoot() {
-        return new File(Jenkins.get().getRootDir(), STORAGE_DIR);
-    }
-
-    private File getJobStorageDir(String jobName) {
-        String safeName = jobName.replace("/", "_").replace("\\", "_").replace(" ", "_");
-        return new File(getStorageRoot(), safeName);
-    }
-
     private File getHistoryFile(String jobName) {
-        File dir = getJobStorageDir(jobName);
-        if (!dir.exists()) {
-            dir.mkdirs();
+        Job<?, ?> job = Jenkins.get().getItemByFullName(jobName, Job.class);
+        if (job == null) {
+            LOGGER.log(Level.WARNING, "Job not found: " + jobName);
+            return null;
         }
-        return new File(dir, HISTORY_FILE);
+        File jobDir = job.getRootDir();
+        if (!jobDir.exists()) {
+            jobDir.mkdirs();
+        }
+        return new File(jobDir, HISTORY_FILE);
     }
 
     public void saveRecord(@NonNull BuildParameterRecord record) {
@@ -179,20 +173,10 @@ public class BuildParameterHistoryService {
     }
 
     public List<BuildParameterRecord> getAllRecords() {
-        File root = getStorageRoot();
         List<BuildParameterRecord> allRecords = new ArrayList<>();
 
-        if (!root.exists() || !root.isDirectory()) {
-            return allRecords;
-        }
-
-        File[] jobDirs = root.listFiles(File::isDirectory);
-        if (jobDirs == null) {
-            return allRecords;
-        }
-
-        for (File jobDir : jobDirs) {
-            File historyFile = new File(jobDir, HISTORY_FILE);
+        for (Job<?, ?> job : Jenkins.get().getAllItems(Job.class)) {
+            File historyFile = new File(job.getRootDir(), HISTORY_FILE);
             if (!historyFile.exists()) {
                 continue;
             }
@@ -200,13 +184,13 @@ public class BuildParameterHistoryService {
             try (BufferedReader reader = new BufferedReader(new FileReader(historyFile))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    BuildParameterRecord record = parseRecord(line, jobDir.getName());
+                    BuildParameterRecord record = parseRecord(line, job.getFullName());
                     if (record != null) {
                         allRecords.add(record);
                     }
                 }
             } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Failed to read history for " + jobDir.getName(), e);
+                LOGGER.log(Level.WARNING, "Failed to read history for " + job.getFullName(), e);
             }
         }
 
@@ -307,22 +291,12 @@ public class BuildParameterHistoryService {
     }
 
     public List<String> getDistinctJobNames() {
-        File root = getStorageRoot();
         List<String> jobNames = new ArrayList<>();
 
-        if (!root.exists() || !root.isDirectory()) {
-            return jobNames;
-        }
-
-        File[] jobDirs = root.listFiles(File::isDirectory);
-        if (jobDirs == null) {
-            return jobNames;
-        }
-
-        for (File jobDir : jobDirs) {
-            File historyFile = new File(jobDir, HISTORY_FILE);
+        for (Job<?, ?> job : Jenkins.get().getAllItems(Job.class)) {
+            File historyFile = new File(job.getRootDir(), HISTORY_FILE);
             if (historyFile.exists()) {
-                jobNames.add(jobDir.getName());
+                jobNames.add(job.getFullName());
             }
         }
 
@@ -368,12 +342,9 @@ public class BuildParameterHistoryService {
     }
 
     public void clearRecordsForJob(String jobName) {
-        File dir = getJobStorageDir(jobName);
-        if (dir.exists() && dir.isDirectory()) {
-            File historyFile = new File(dir, HISTORY_FILE);
-            if (historyFile.exists()) {
-                historyFile.delete();
-            }
+        File historyFile = getHistoryFile(jobName);
+        if (historyFile != null && historyFile.exists()) {
+            historyFile.delete();
         }
     }
 }
