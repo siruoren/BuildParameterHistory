@@ -463,6 +463,12 @@
                     </j:choose>
                 </div>
             </j:if>
+
+            <div class="bph-actions">
+                <a href="downloadHistory" class="bph-btn bph-btn-primary" style="text-decoration: none;">
+                    Download History
+                </a>
+            </div>
         </div>
     </l:main-panel>
 </l:layout>

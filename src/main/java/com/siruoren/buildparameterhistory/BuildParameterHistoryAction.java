@@ -1,12 +1,16 @@
 package com.siruoren.buildparameterhistory;
 
 import hudson.model.Job;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
+import org.apache.commons.io.IOUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.interceptor.RequirePOST;
@@ -216,5 +220,31 @@ public class BuildParameterHistoryAction implements hudson.model.Action {
             sb.append("&parameterValue=").append(parameterValue);
         }
         return sb.toString();
+    }
+
+    /**
+     * Download build parameter history file via API
+     * API: /job/{job_name}/buildParameterHistory/downloadHistory
+     */
+    public void doDownloadHistory(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
+        job.checkPermission(Job.READ);
+
+        File historyFile = BuildParameterHistoryService.getInstance().getHistoryFile(job.getFullName());
+        if (historyFile == null || !historyFile.exists()) {
+            rsp.setStatus(404);
+            rsp.getWriter().write("No history file found for this job");
+            return;
+        }
+
+        String fileName = job.getName() + "_param_history.txt";
+
+        rsp.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+        rsp.setContentType("text/plain; charset=UTF-8");
+        rsp.setStatus(200);
+
+        try (InputStream inputStream = new FileInputStream(historyFile)) {
+            IOUtils.copy(inputStream, rsp.getOutputStream());
+        }
+        rsp.getOutputStream().flush();
     }
 }

@@ -37,7 +37,7 @@ public class BuildParameterHistoryService {
         return instance;
     }
 
-    private File getHistoryFile(String jobName) {
+    public File getHistoryFile(String jobName) {
         Job<?, ?> job = Jenkins.get().getItemByFullName(jobName, Job.class);
         if (job == null) {
             LOGGER.log(Level.WARNING, "Job not found: " + jobName);
