@@ -8,6 +8,8 @@
         <style type="text/css">
             .bph-container {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                max-width: 100%;
+                overflow-x: hidden;
             }
             .bph-header {
                 display: flex;
@@ -16,6 +18,7 @@
                 margin-bottom: 20px;
                 padding-bottom: 10px;
                 border-bottom: 2px solid #4b758b;
+                flex-wrap: wrap;
             }
             .bph-header h1 {
                 margin: 0;
@@ -45,7 +48,8 @@
             .bph-filter-item {
                 display: flex;
                 flex-direction: column;
-                min-width: 180px;
+                min-width: 150px;
+                flex: 1 1 150px;
             }
             .bph-filter-item label {
                 font-size: 12px;
@@ -59,6 +63,8 @@
                 border: 1px solid #ced4da;
                 border-radius: 4px;
                 font-size: 13px;
+                width: 100%;
+                box-sizing: border-box;
             }
             .bph-filter-item input:focus,
             .bph-filter-item select:focus {
@@ -74,6 +80,9 @@
                 font-size: 13px;
                 font-weight: 500;
                 transition: background-color 0.2s;
+                display: inline-block;
+                text-decoration: none;
+                line-height: 20px;
             }
             .bph-btn-primary {
                 background-color: #4b758b;
@@ -96,13 +105,25 @@
             .bph-btn-secondary:hover {
                 background-color: #5a6268;
             }
+            .bph-btn-page {
+                background-color: #e9ecef;
+                color: #495057;
+                min-width: 32px;
+                text-align: center;
+                padding: 4px 8px;
+            }
+            .bph-btn-page:hover {
+                background-color: #dee2e6;
+            }
             .bph-table-container {
                 overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             }
             .bph-table {
                 width: 100%;
                 border-collapse: collapse;
                 font-size: 13px;
+                min-width: 800px;
             }
             .bph-table th {
                 background-color: #4b758b;
@@ -116,6 +137,7 @@
                 padding: 8px 12px;
                 border-bottom: 1px solid #dee2e6;
                 vertical-align: top;
+                word-break: break-word;
             }
             .bph-table tr:hover td {
                 background-color: #f1f3f5;
@@ -133,30 +155,12 @@
                 font-size: 12px;
                 font-weight: 600;
             }
-            .bph-result-SUCCESS {
-                background-color: #d4edda;
-                color: #155724;
-            }
-            .bph-result-FAILURE {
-                background-color: #f8d7da;
-                color: #721c24;
-            }
-            .bph-result-UNSTABLE {
-                background-color: #fff3cd;
-                color: #856404;
-            }
-            .bph-result-ABORTED {
-                background-color: #e2e3e5;
-                color: #383d41;
-            }
-            .bph-result-NOT_BUILT {
-                background-color: #e2e3e5;
-                color: #383d41;
-            }
-            .bph-result-default {
-                background-color: #cce5ff;
-                color: #004085;
-            }
+            .bph-result-SUCCESS { background-color: #d4edda; color: #155724; }
+            .bph-result-FAILURE { background-color: #f8d7da; color: #721c24; }
+            .bph-result-UNSTABLE { background-color: #fff3cd; color: #856404; }
+            .bph-result-ABORTED { background-color: #e2e3e5; color: #383d41; }
+            .bph-result-NOT_BUILT { background-color: #e2e3e5; color: #383d41; }
+            .bph-result-default { background-color: #cce5ff; color: #004085; }
             .bph-build-link {
                 color: #4b758b;
                 text-decoration: none;
@@ -193,6 +197,7 @@
                 display: flex;
                 gap: 8px;
                 margin-top: 10px;
+                flex-wrap: wrap;
             }
             .bph-stats {
                 font-size: 12px;
@@ -209,7 +214,45 @@
                 font-weight: 600;
                 margin-right: 4px;
             }
+            .bph-pagination {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 4px;
+                margin: 15px 0;
+                flex-wrap: wrap;
+            }
+            .bph-pagination-info {
+                font-size: 12px;
+                color: #6c757d;
+                margin: 0 10px;
+            }
+            @media screen and (max-width: 768px) {
+                .bph-filter-item {
+                    min-width: 120px;
+                    flex: 1 1 120px;
+                }
+                .bph-table {
+                    font-size: 12px;
+                }
+                .bph-table th, .bph-table td {
+                    padding: 6px 8px;
+                }
+                .bph-params {
+                    max-width: 250px;
+                }
+            }
         </style>
+
+        <j:set var="resultFilter" value="${request.getAttribute('bph.resultFilter')}"/>
+        <j:set var="searchKeyword" value="${request.getAttribute('bph.searchKeyword')}"/>
+        <j:set var="parameterName" value="${request.getAttribute('bph.parameterName')}"/>
+        <j:set var="parameterValue" value="${request.getAttribute('bph.parameterValue')}"/>
+        <j:set var="pageRecords" value="${request.getAttribute('bph.pageRecords')}"/>
+        <j:set var="currentPage" value="${request.getAttribute('bph.currentPage')}"/>
+        <j:set var="totalPages" value="${request.getAttribute('bph.totalPages')}"/>
+        <j:set var="totalRecords" value="${request.getAttribute('bph.totalRecords')}"/>
+        <j:set var="hasFilter" value="${request.getAttribute('bph.hasFilter')}"/>
 
         <div class="bph-container">
             <div class="bph-header">
@@ -223,42 +266,54 @@
                         <div class="bph-filter-item">
                             <label>${%Build Result}</label>
                             <select name="resultFilter">
-                                <j:if test="${resultFilter == 'ALL' or empty(resultFilter)}">
-                                    <option value="ALL" selected="selected">${%All}</option>
-                                </j:if>
-                                <j:if test="${resultFilter != 'ALL' and not empty(resultFilter)}">
-                                    <option value="ALL">${%All}</option>
-                                </j:if>
-                                <j:if test="${resultFilter == 'SUCCESS'}">
-                                    <option value="SUCCESS" selected="selected">SUCCESS</option>
-                                </j:if>
-                                <j:if test="${resultFilter != 'SUCCESS'}">
-                                    <option value="SUCCESS">SUCCESS</option>
-                                </j:if>
-                                <j:if test="${resultFilter == 'FAILURE'}">
-                                    <option value="FAILURE" selected="selected">FAILURE</option>
-                                </j:if>
-                                <j:if test="${resultFilter != 'FAILURE'}">
-                                    <option value="FAILURE">FAILURE</option>
-                                </j:if>
-                                <j:if test="${resultFilter == 'UNSTABLE'}">
-                                    <option value="UNSTABLE" selected="selected">UNSTABLE</option>
-                                </j:if>
-                                <j:if test="${resultFilter != 'UNSTABLE'}">
-                                    <option value="UNSTABLE">UNSTABLE</option>
-                                </j:if>
-                                <j:if test="${resultFilter == 'ABORTED'}">
-                                    <option value="ABORTED" selected="selected">ABORTED</option>
-                                </j:if>
-                                <j:if test="${resultFilter != 'ABORTED'}">
-                                    <option value="ABORTED">ABORTED</option>
-                                </j:if>
-                                <j:if test="${resultFilter == 'NOT_BUILT'}">
-                                    <option value="NOT_BUILT" selected="selected">NOT_BUILT</option>
-                                </j:if>
-                                <j:if test="${resultFilter != 'NOT_BUILT'}">
-                                    <option value="NOT_BUILT">NOT_BUILT</option>
-                                </j:if>
+                                <j:choose>
+                                    <j:when test="${empty resultFilter or resultFilter == '' or resultFilter == 'ALL'}">
+                                        <option value="ALL" selected="selected">${%All}</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="ALL">${%All}</option>
+                                    </j:otherwise>
+                                </j:choose>
+                                <j:choose>
+                                    <j:when test="${resultFilter == 'SUCCESS'}">
+                                        <option value="SUCCESS" selected="selected">SUCCESS</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="SUCCESS">SUCCESS</option>
+                                    </j:otherwise>
+                                </j:choose>
+                                <j:choose>
+                                    <j:when test="${resultFilter == 'FAILURE'}">
+                                        <option value="FAILURE" selected="selected">FAILURE</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="FAILURE">FAILURE</option>
+                                    </j:otherwise>
+                                </j:choose>
+                                <j:choose>
+                                    <j:when test="${resultFilter == 'UNSTABLE'}">
+                                        <option value="UNSTABLE" selected="selected">UNSTABLE</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="UNSTABLE">UNSTABLE</option>
+                                    </j:otherwise>
+                                </j:choose>
+                                <j:choose>
+                                    <j:when test="${resultFilter == 'ABORTED'}">
+                                        <option value="ABORTED" selected="selected">ABORTED</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="ABORTED">ABORTED</option>
+                                    </j:otherwise>
+                                </j:choose>
+                                <j:choose>
+                                    <j:when test="${resultFilter == 'NOT_BUILT'}">
+                                        <option value="NOT_BUILT" selected="selected">NOT_BUILT</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="NOT_BUILT">NOT_BUILT</option>
+                                    </j:otherwise>
+                                </j:choose>
                             </select>
                         </div>
                         <div class="bph-filter-item">
@@ -271,13 +326,13 @@
                         </div>
                     </div>
                     <div class="bph-filter-row">
-                        <div class="bph-filter-item" style="flex: 1; min-width: 300px;">
+                        <div class="bph-filter-item" style="flex: 2 1 300px;">
                             <label>${%Global Search}</label>
                             <input type="text" name="searchKeyword" value="${searchKeyword}" placeholder="${%Search across all fields...}" style="width: 100%;"/>
                         </div>
                         <div style="display: flex; gap: 8px; align-self: flex-end;">
                             <button type="submit" class="bph-btn bph-btn-primary">${%Filter}</button>
-                            <a href="buildParameterHistory" class="bph-btn bph-btn-secondary" style="text-decoration: none; line-height: 20px;">${%Reset}</a>
+                            <a href="." class="bph-btn bph-btn-secondary">${%Reset}</a>
                         </div>
                     </div>
                 </form>
@@ -285,25 +340,25 @@
 
             <div class="bph-stats">
                 <j:choose>
-                    <j:when test="${empty filteredRecords}">
-                        <j:choose>
-                            <j:when test="${empty records}">
-                                ${%No build parameter records found.}
-                            </j:when>
-                            <j:otherwise>
-                                Showing ${displayRecords.size()} records, Total: ${records.size()} records.
-                            </j:otherwise>
-                        </j:choose>
+                    <j:when test="${totalRecords == 0}">
+                        ${%No build parameter records found.}
                     </j:when>
                     <j:otherwise>
-                        Filtered: ${displayRecords.size()} records (Total: ${records.size()} records).
+                        <j:choose>
+                            <j:when test="${hasFilter}">
+                                Filtered: ${totalRecords} records. Showing page ${currentPage} of ${totalPages}.
+                            </j:when>
+                            <j:otherwise>
+                                Total: ${totalRecords} records. Showing page ${currentPage} of ${totalPages}.
+                            </j:otherwise>
+                        </j:choose>
                     </j:otherwise>
                 </j:choose>
             </div>
 
             <div class="bph-table-container">
                 <j:choose>
-                    <j:when test="${empty displayRecords}">
+                    <j:when test="${totalRecords == 0}">
                         <div class="bph-empty">
                             ${%No build parameter records found. Records will appear here after builds with parameters are executed.}
                         </div>
@@ -322,7 +377,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <j:forEach var="record" items="${displayRecords}">
+                                <j:forEach var="record" items="${pageRecords}">
                                     <tr>
                                         <td>${record.jobName}</td>
                                         <td>
@@ -361,9 +416,9 @@
                                                     <span style="color: #6c757d;">${%No parameters}</span>
                                                 </j:when>
                                                 <j:otherwise>
-                                                    <j:forEach var="param" items="${record.parameters}" varStatus="status">
+                                                    <j:forEach var="param" items="${record.parameters}" varStatus="paramStatus">
                                                         <div class="bph-param-item">
-                                                            <span class="bph-param-index">Param ${status.index + 1}</span>
+                                                            <span class="bph-param-index">Param ${paramStatus.index + 1}</span>
                                                             <span class="bph-param-name">${param.name}：</span>
                                                             <span class="bph-param-value">${param.value}</span>
                                                         </div>
@@ -378,6 +433,36 @@
                     </j:otherwise>
                 </j:choose>
             </div>
+
+            <j:if test="${totalPages > 1}">
+                <div class="bph-pagination">
+                    <j:choose>
+                        <j:when test="${currentPage > 1}">
+                            <a href="${it.buildPageUrl(1, resultFilter, searchKeyword, parameterName, parameterValue)}" class="bph-btn bph-btn-page">First</a>
+                            <a href="${it.buildPageUrl(currentPage - 1, resultFilter, searchKeyword, parameterName, parameterValue)}" class="bph-btn bph-btn-page">Prev</a>
+                        </j:when>
+                        <j:otherwise>
+                            <span class="bph-btn bph-btn-page" style="opacity:0.5;cursor:default;">First</span>
+                            <span class="bph-btn bph-btn-page" style="opacity:0.5;cursor:default;">Prev</span>
+                        </j:otherwise>
+                    </j:choose>
+
+                    <span class="bph-pagination-info">
+                        Page ${currentPage} / ${totalPages}
+                    </span>
+
+                    <j:choose>
+                        <j:when test="${currentPage &lt; totalPages}">
+                            <a href="${it.buildPageUrl(currentPage + 1, resultFilter, searchKeyword, parameterName, parameterValue)}" class="bph-btn bph-btn-page">Next</a>
+                            <a href="${it.buildPageUrl(totalPages, resultFilter, searchKeyword, parameterName, parameterValue)}" class="bph-btn bph-btn-page">Last</a>
+                        </j:when>
+                        <j:otherwise>
+                            <span class="bph-btn bph-btn-page" style="opacity:0.5;cursor:default;">Next</span>
+                            <span class="bph-btn bph-btn-page" style="opacity:0.5;cursor:default;">Last</span>
+                        </j:otherwise>
+                    </j:choose>
+                </div>
+            </j:if>
 
             <div class="bph-actions">
                 <form method="post" action="clearHistory">
