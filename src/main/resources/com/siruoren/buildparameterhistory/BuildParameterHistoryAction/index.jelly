@@ -463,14 +463,6 @@
                     </j:choose>
                 </div>
             </j:if>
-
-            <div class="bph-actions">
-                <form method="post" action="clearHistory">
-                    <button type="submit" class="bph-btn bph-btn-danger" onclick="return confirm('${%Are you sure you want to clear all build parameter history?}')">
-                        ${%Clear All History}
-                    </button>
-                </form>
-            </div>
         </div>
     </l:main-panel>
 </l:layout>

@@ -22,6 +22,7 @@ public class BuildParameterHistoryService {
 
     private static final Logger LOGGER = Logger.getLogger(BuildParameterHistoryService.class.getName());
     private static final String HISTORY_FILE = "param_history";
+    private static final int MAX_RECORDS = 200;
 
     private static BuildParameterHistoryService instance;
     private final Object fileLock = new Object();
@@ -78,6 +79,9 @@ public class BuildParameterHistoryService {
                     bw.write(line + "\n");
                     bw.close();
                 }
+
+                // Auto-remove old records if exceeding max limit
+                trimOldRecords(historyFile);
 
                 LOGGER.log(Level.FINE, "Saved build parameter record for {0} #{1}",
                         new Object[]{record.getJobName(), record.getBuildId()});
@@ -412,6 +416,43 @@ public class BuildParameterHistoryService {
             if (historyFile != null && historyFile.exists()) {
                 historyFile.delete();
             }
+        }
+    }
+
+    private void trimOldRecords(File historyFile) {
+        if (historyFile == null || !historyFile.exists()) {
+            return;
+        }
+
+        try {
+            List<String> allLines = new ArrayList<>();
+            try (BufferedReader reader = new BufferedReader(new FileReader(historyFile))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (!line.trim().isEmpty()) {
+                        allLines.add(line);
+                    }
+                }
+            }
+
+            if (allLines.size() <= MAX_RECORDS) {
+                return;
+            }
+
+            // Keep only the latest MAX_RECORDS (newest records are at the beginning)
+            List<String> trimmedLines = allLines.subList(0, MAX_RECORDS);
+
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(historyFile))) {
+                for (String line : trimmedLines) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+
+            LOGGER.log(Level.FINE, "Trimmed {0} old records from history file, kept latest {1}",
+                    new Object[]{allLines.size() - MAX_RECORDS, MAX_RECORDS});
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Failed to trim old records from history file", e);
         }
     }
 }
