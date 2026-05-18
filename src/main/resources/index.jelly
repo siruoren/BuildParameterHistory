@@ -1,0 +1,17 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core">
+    <div>
+        <h3>Build Parameter History Plugin</h3>
+        <p>Records and displays build parameter history for Jenkins jobs.</p>
+        <p>This plugin automatically records build parameters for each build execution, including:</p>
+        <ul>
+            <li>Job name</li>
+            <li>Build ID with link to build page</li>
+            <li>Start and end time</li>
+            <li>Build duration</li>
+            <li>Build result</li>
+            <li>Parameters with name and value</li>
+        </ul>
+        <p>To view build parameter history, navigate to any buildable job and click "Build Parameter History" in the left sidebar.</p>
+    </div>
+</j:jelly>
