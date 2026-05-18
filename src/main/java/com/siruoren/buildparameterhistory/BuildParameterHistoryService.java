@@ -1,13 +1,18 @@
 package com.siruoren.buildparameterhistory;
 
-import com.thoughtworks.xstream.XStream;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.XmlFile;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,6 +23,7 @@ public class BuildParameterHistoryService {
 
     private static final Logger LOGGER = Logger.getLogger(BuildParameterHistoryService.class.getName());
     private static final String STORAGE_DIR = "build-parameter-history";
+    private static final String HISTORY_FILE = "param_history";
 
     private static BuildParameterHistoryService instance;
 
@@ -40,27 +46,40 @@ public class BuildParameterHistoryService {
         return new File(getStorageRoot(), safeName);
     }
 
-    private XmlFile getRecordFile(String jobName, String buildId) {
+    private File getHistoryFile(String jobName) {
         File dir = getJobStorageDir(jobName);
         if (!dir.exists()) {
             dir.mkdirs();
         }
-        return new XmlFile(getXStream(), new File(dir, buildId + ".xml"));
-    }
-
-    private XStream getXStream() {
-        XStream xs = new XStream();
-        xs.alias("buildParameterRecord", BuildParameterRecord.class);
-        xs.alias("parameterEntry", BuildParameterRecord.ParameterEntry.class);
-        xs.allowTypes(new Class[]{BuildParameterRecord.class, BuildParameterRecord.ParameterEntry.class});
-        return xs;
+        return new File(dir, HISTORY_FILE);
     }
 
     public void saveRecord(@NonNull BuildParameterRecord record) {
         try {
-            XmlFile file = getRecordFile(record.getJobName(), record.getBuildId());
-            file.write(record);
-            fixXmlVersion(file.getFile());
+            File historyFile = getHistoryFile(record.getJobName());
+            
+            String line = formatRecord(record);
+            
+            if (historyFile.exists()) {
+                BufferedReader reader = new BufferedReader(new FileReader(historyFile));
+                StringWriter writer = new StringWriter();
+                writer.write(line + "\n");
+                
+                String existingLine;
+                while ((existingLine = reader.readLine()) != null) {
+                    writer.write(existingLine + "\n");
+                }
+                reader.close();
+                
+                BufferedWriter bw = new BufferedWriter(new FileWriter(historyFile));
+                bw.write(writer.toString());
+                bw.close();
+            } else {
+                BufferedWriter bw = new BufferedWriter(new FileWriter(historyFile));
+                bw.write(line + "\n");
+                bw.close();
+            }
+            
             LOGGER.log(Level.FINE, "Saved build parameter record for {0} #{1}",
                     new Object[]{record.getJobName(), record.getBuildId()});
         } catch (IOException e) {
@@ -68,17 +87,29 @@ public class BuildParameterHistoryService {
         }
     }
 
-    private void fixXmlVersion(File file) {
-        try {
-            java.nio.file.Path path = file.toPath();
-            String content = new String(java.nio.file.Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8);
-            if (content.startsWith("<?xml version=\"1.1\"")) {
-                content = content.replace("<?xml version=\"1.1\"", "<?xml version=\"1.0\"");
-                java.nio.file.Files.write(path, content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    private String formatRecord(BuildParameterRecord record) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(record.getJobName()).append("|");
+        sb.append(record.getBuildId()).append("|");
+        sb.append(record.getBuildUrl()).append("|");
+        sb.append(record.getStartTime()).append("|");
+        sb.append(record.getEndTime()).append("|");
+        sb.append(record.getResult() != null ? record.getResult() : "UNKNOWN").append("|");
+        
+        if (record.getParameters() != null && !record.getParameters().isEmpty()) {
+            StringBuilder paramsBuilder = new StringBuilder();
+            int index = 1;
+            for (BuildParameterRecord.ParameterEntry param : record.getParameters()) {
+                if (index > 1) {
+                    paramsBuilder.append(" ");
+                }
+                paramsBuilder.append("参数").append(index).append(":").append(param.getName()).append("：").append(param.getValue());
+                index++;
             }
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Failed to fix XML version for " + file.getName(), e);
+            sb.append(paramsBuilder.toString());
         }
+        
+        return sb.toString();
     }
 
     public void updateRecord(@NonNull BuildParameterRecord record) {
@@ -86,37 +117,65 @@ public class BuildParameterHistoryService {
     }
 
     public List<BuildParameterRecord> getRecordsForJob(String jobName) {
-        File dir = getJobStorageDir(jobName);
         List<BuildParameterRecord> records = new ArrayList<>();
-
-        if (!dir.exists() || !dir.isDirectory()) {
+        
+        File historyFile = getHistoryFile(jobName);
+        if (!historyFile.exists()) {
             return records;
         }
 
-        File[] files = dir.listFiles((d, name) -> name.endsWith(".xml"));
-        if (files == null) {
-            return records;
-        }
-
-        XStream xs = getXStream();
-        for (File file : files) {
-            try {
-                if (!file.exists() || file.length() == 0) {
-                    continue;
+        try (BufferedReader reader = new BufferedReader(new FileReader(historyFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                BuildParameterRecord record = parseRecord(line, jobName);
+                if (record != null) {
+                    records.add(record);
                 }
-                
-                XmlFile xmlFile = new XmlFile(xs, file);
-                Object obj = xmlFile.read();
-                if (obj instanceof BuildParameterRecord) {
-                    records.add((BuildParameterRecord) obj);
-                }
-            } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Failed to read build parameter record from " + file.getName(), e);
             }
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Failed to read build parameter history for " + jobName, e);
         }
 
-        records.sort(Comparator.comparingLong(BuildParameterRecord::getStartTime).reversed());
         return records;
+    }
+
+    private BuildParameterRecord parseRecord(String line, String jobName) {
+        if (line == null || line.trim().isEmpty()) {
+            return null;
+        }
+
+        String[] parts = line.split("\\|", 7);
+        if (parts.length < 6) {
+            return null;
+        }
+
+        try {
+            String buildId = parts[1];
+            String buildUrl = parts[2];
+            long startTime = Long.parseLong(parts[3]);
+            long endTime = Long.parseLong(parts[4]);
+            String result = parts[5];
+
+            List<BuildParameterRecord.ParameterEntry> parameters = new ArrayList<>();
+            
+            if (parts.length > 6 && parts[6] != null && !parts[6].trim().isEmpty()) {
+                String paramsStr = parts[6];
+                String[] paramEntries = paramsStr.split(" ");
+                for (String entry : paramEntries) {
+                    int colonIndex = entry.indexOf(":");
+                    if (colonIndex > 0 && colonIndex < entry.length() - 1) {
+                        String name = entry.substring(colonIndex + 1, entry.indexOf("："));
+                        String value = entry.substring(entry.indexOf("：") + 1);
+                        parameters.add(new BuildParameterRecord.ParameterEntry(name, value));
+                    }
+                }
+            }
+
+            return new BuildParameterRecord(jobName, buildId, buildUrl, startTime, endTime, result, parameters);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to parse record: " + line, e);
+            return null;
+        }
     }
 
     public List<BuildParameterRecord> getAllRecords() {
@@ -133,26 +192,21 @@ public class BuildParameterHistoryService {
         }
 
         for (File jobDir : jobDirs) {
-            File[] files = jobDir.listFiles((d, name) -> name.endsWith(".xml"));
-            if (files == null) {
+            File historyFile = new File(jobDir, HISTORY_FILE);
+            if (!historyFile.exists()) {
                 continue;
             }
 
-            XStream xs = getXStream();
-            for (File file : files) {
-                try {
-                    if (!file.exists() || file.length() == 0) {
-                        continue;
+            try (BufferedReader reader = new BufferedReader(new FileReader(historyFile))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    BuildParameterRecord record = parseRecord(line, jobDir.getName());
+                    if (record != null) {
+                        allRecords.add(record);
                     }
-                    
-                    XmlFile xmlFile = new XmlFile(xs, file);
-                    Object obj = xmlFile.read();
-                    if (obj instanceof BuildParameterRecord) {
-                        allRecords.add((BuildParameterRecord) obj);
-                    }
-                } catch (IOException e) {
-                    LOGGER.log(Level.WARNING, "Failed to read build parameter record from " + file.getName(), e);
                 }
+            } catch (IOException e) {
+                LOGGER.log(Level.WARNING, "Failed to read history for " + jobDir.getName(), e);
             }
         }
 
@@ -266,28 +320,9 @@ public class BuildParameterHistoryService {
         }
 
         for (File jobDir : jobDirs) {
-            File[] xmlFiles = jobDir.listFiles((d, name) -> name.endsWith(".xml"));
-            if (xmlFiles != null && xmlFiles.length > 0) {
-                XStream xs = getXStream();
-                for (File xmlFile : xmlFiles) {
-                    try {
-                        if (!xmlFile.exists() || xmlFile.length() == 0) {
-                            continue;
-                        }
-                        
-                        XmlFile xf = new XmlFile(xs, xmlFile);
-                        Object obj = xf.read();
-                        if (obj instanceof BuildParameterRecord) {
-                            String jn = ((BuildParameterRecord) obj).getJobName();
-                            if (!jobNames.contains(jn)) {
-                                jobNames.add(jn);
-                            }
-                            break;
-                        }
-                    } catch (IOException e) {
-                        LOGGER.log(Level.WARNING, "Failed to read record from " + xmlFile.getName(), e);
-                    }
-                }
+            File historyFile = new File(jobDir, HISTORY_FILE);
+            if (historyFile.exists()) {
+                jobNames.add(jobDir.getName());
             }
         }
 
@@ -306,23 +341,39 @@ public class BuildParameterHistoryService {
     }
 
     public void deleteRecord(String jobName, String buildId) {
-        File dir = getJobStorageDir(jobName);
-        File file = new File(dir, buildId + ".xml");
-        if (file.exists()) {
-            file.delete();
+        File historyFile = getHistoryFile(jobName);
+        if (!historyFile.exists()) {
+            return;
+        }
+
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(historyFile));
+            StringWriter writer = new StringWriter();
+            String line;
+            
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\\|", 2);
+                if (parts.length > 1 && !parts[1].startsWith(buildId + "|")) {
+                    writer.write(line + "\n");
+                }
+            }
+            reader.close();
+            
+            BufferedWriter bw = new BufferedWriter(new FileWriter(historyFile));
+            bw.write(writer.toString());
+            bw.close();
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Failed to delete record for " + jobName + " #" + buildId, e);
         }
     }
 
     public void clearRecordsForJob(String jobName) {
         File dir = getJobStorageDir(jobName);
         if (dir.exists() && dir.isDirectory()) {
-            File[] files = dir.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    file.delete();
-                }
+            File historyFile = new File(dir, HISTORY_FILE);
+            if (historyFile.exists()) {
+                historyFile.delete();
             }
-            dir.delete();
         }
     }
 }

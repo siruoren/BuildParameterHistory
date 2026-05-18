@@ -223,12 +223,42 @@
                         <div class="bph-filter-item">
                             <label>${%Build Result}</label>
                             <select name="resultFilter">
-                                <option value="ALL" ${resultFilter == 'ALL' || empty(resultFilter) ? 'selected' : ''}>${%All}</option>
-                                <option value="SUCCESS" ${resultFilter == 'SUCCESS' ? 'selected' : ''}>SUCCESS</option>
-                                <option value="FAILURE" ${resultFilter == 'FAILURE' ? 'selected' : ''}>FAILURE</option>
-                                <option value="UNSTABLE" ${resultFilter == 'UNSTABLE' ? 'selected' : ''}>UNSTABLE</option>
-                                <option value="ABORTED" ${resultFilter == 'ABORTED' ? 'selected' : ''}>ABORTED</option>
-                                <option value="NOT_BUILT" ${resultFilter == 'NOT_BUILT' ? 'selected' : ''}>NOT_BUILT</option>
+                                <j:if test="${resultFilter == 'ALL' or empty(resultFilter)}">
+                                    <option value="ALL" selected>${%All}</option>
+                                </j:if>
+                                <j:if test="${resultFilter != 'ALL' and not empty(resultFilter)}">
+                                    <option value="ALL">${%All}</option>
+                                </j:if>
+                                <j:if test="${resultFilter == 'SUCCESS'}">
+                                    <option value="SUCCESS" selected>SUCCESS</option>
+                                </j:if>
+                                <j:if test="${resultFilter != 'SUCCESS'}">
+                                    <option value="SUCCESS">SUCCESS</option>
+                                </j:if>
+                                <j:if test="${resultFilter == 'FAILURE'}">
+                                    <option value="FAILURE" selected>FAILURE</option>
+                                </j:if>
+                                <j:if test="${resultFilter != 'FAILURE'}">
+                                    <option value="FAILURE">FAILURE</option>
+                                </j:if>
+                                <j:if test="${resultFilter == 'UNSTABLE'}">
+                                    <option value="UNSTABLE" selected>UNSTABLE</option>
+                                </j:if>
+                                <j:if test="${resultFilter != 'UNSTABLE'}">
+                                    <option value="UNSTABLE">UNSTABLE</option>
+                                </j:if>
+                                <j:if test="${resultFilter == 'ABORTED'}">
+                                    <option value="ABORTED" selected>ABORTED</option>
+                                </j:if>
+                                <j:if test="${resultFilter != 'ABORTED'}">
+                                    <option value="ABORTED">ABORTED</option>
+                                </j:if>
+                                <j:if test="${resultFilter == 'NOT_BUILT'}">
+                                    <option value="NOT_BUILT" selected>NOT_BUILT</option>
+                                </j:if>
+                                <j:if test="${resultFilter != 'NOT_BUILT'}">
+                                    <option value="NOT_BUILT">NOT_BUILT</option>
+                                </j:if>
                             </select>
                         </div>
                         <div class="bph-filter-item">
