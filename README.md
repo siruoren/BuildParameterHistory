@@ -98,4 +98,4 @@ MIT License - see LICENSE file for details
 
 ## Version
 
-0.0.1-SNAPSHOT
+1.0.0
