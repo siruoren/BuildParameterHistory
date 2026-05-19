@@ -25,10 +25,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Duplicate method issue**: Merged duplicate `getRecordsForJob()` methods by delegation pattern
 - **Missing method closure**: Fixed syntax error in `getRecordsForJob(File, String)` method body
 - **Code deduplication**: Refactored `filterRecords()` to delegate to `getFilteredRecordsForJob()`, reducing ~40 lines of duplicate code
+- **i18n not rendering in browser**: Jelly `${%Key}` cross-package reference (`${%com.siruoren.buildparameterhistory.Messages.Key}`) does not work in Jenkins. Changed to direct Messages class method calls (`${com.siruoren.buildparameterhistory.Messages.Key_Name()}`) which correctly resolves locale at runtime
+- **Chinese locale displaying blank content**: Converted `Messages_zh_CN.properties` from Unicode escape format to UTF-8 encoding to ensure proper rendering in Chinese browser environments
 
 ### Changed
-- All hardcoded English text in UI replaced with internationalization keys (`${%Key.Name}`)
-- Jelly template now uses Jenkins localizer for automatic language switching
+- All hardcoded English text in UI replaced with internationalization via Messages class method calls
+- Jelly template now uses generated `com.siruoren.buildparameterhistory.Messages` class for i18n resolution
 
 ## [1.0.0-SNAPSHOT] - 2026-05-18
 

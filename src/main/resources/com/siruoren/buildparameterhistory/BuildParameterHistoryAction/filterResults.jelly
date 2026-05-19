@@ -227,41 +227,41 @@
 
         <div class="bph-container">
             <div class="bph-header">
-                <h1>${%Build Parameter History}</h1>
+                <h1>${com.siruoren.buildparameterhistory.Messages.BuildParameterHistoryAction_DisplayName()}</h1>
             </div>
 
             <div class="bph-filters">
-                <div class="bph-filters-title">${%Filter Records}</div>
+                <div class="bph-filters-title">${com.siruoren.buildparameterhistory.Messages.Filter_Records()}</div>
                 <form method="post" action="filterResults">
                     <div class="bph-filter-row">
                         <div class="bph-filter-item">
-                            <label>${%Build Result}</label>
+                            <label>${com.siruoren.buildparameterhistory.Messages.Filter_Build_Result()}</label>
                             <select name="resultFilter">
-                                <option value="ALL" ${resultFilter == 'ALL' or empty resultFilter ? 'selected' : ''}>${%All}</option>
-                                <option value="SUCCESS" ${resultFilter == 'SUCCESS' ? 'selected' : ''}>SUCCESS</option>
-                                <option value="FAILURE" ${resultFilter == 'FAILURE' ? 'selected' : ''}>FAILURE</option>
-                                <option value="UNSTABLE" ${resultFilter == 'UNSTABLE' ? 'selected' : ''}>UNSTABLE</option>
-                                <option value="ABORTED" ${resultFilter == 'ABORTED' ? 'selected' : ''}>ABORTED</option>
-                                <option value="NOT_BUILT" ${resultFilter == 'NOT_BUILT' ? 'selected' : ''}>NOT_BUILT</option>
+                                <option value="ALL" ${resultFilter == 'ALL' or empty resultFilter ? 'selected' : ''}>${com.siruoren.buildparameterhistory.Messages.Filter_All()}</option>
+                                <option value="SUCCESS" ${resultFilter == 'SUCCESS' ? 'selected' : ''}>${com.siruoren.buildparameterhistory.Messages.Result_Success()}</option>
+                                <option value="FAILURE" ${resultFilter == 'FAILURE' ? 'selected' : ''}>${com.siruoren.buildparameterhistory.Messages.Result_Failure()}</option>
+                                <option value="UNSTABLE" ${resultFilter == 'UNSTABLE' ? 'selected' : ''}>${com.siruoren.buildparameterhistory.Messages.Result_Unstable()}</option>
+                                <option value="ABORTED" ${resultFilter == 'ABORTED' ? 'selected' : ''}>${com.siruoren.buildparameterhistory.Messages.Result_Aborted()}</option>
+                                <option value="NOT_BUILT" ${resultFilter == 'NOT_BUILT' ? 'selected' : ''}>${com.siruoren.buildparameterhistory.Messages.Result_NotBuilt()}</option>
                             </select>
                         </div>
                         <div class="bph-filter-item">
-                            <label>${%Parameter Name}</label>
-                            <input type="text" name="parameterName" value="${parameterName}" placeholder="${%Filter by param name}"/>
+                            <label>${com.siruoren.buildparameterhistory.Messages.Filter_Parameter_Name()}</label>
+                            <input type="text" name="parameterName" value="${parameterName}" placeholder="${com.siruoren.buildparameterhistory.Messages.Filter_Parameter_Name_Placeholder()}"/>
                         </div>
                         <div class="bph-filter-item">
-                            <label>${%Parameter Value}</label>
-                            <input type="text" name="parameterValue" value="${parameterValue}" placeholder="${%Filter by param value}"/>
+                            <label>${com.siruoren.buildparameterhistory.Messages.Filter_Parameter_Value()}</label>
+                            <input type="text" name="parameterValue" value="${parameterValue}" placeholder="${com.siruoren.buildparameterhistory.Messages.Filter_Parameter_Value_Placeholder()}"/>
                         </div>
                     </div>
                     <div class="bph-filter-row">
                         <div class="bph-filter-item" style="flex: 1; min-width: 300px;">
-                            <label>${%Global Search}</label>
-                            <input type="text" name="searchKeyword" value="${searchKeyword}" placeholder="${%Search across all fields...}" style="width: 100%;"/>
+                            <label>${com.siruoren.buildparameterhistory.Messages.Filter_Global_Search()}</label>
+                            <input type="text" name="searchKeyword" value="${searchKeyword}" placeholder="${com.siruoren.buildparameterhistory.Messages.Filter_Global_Search_Placeholder()}" style="width: 100%;"/>
                         </div>
                         <div style="display: flex; gap: 8px; align-self: flex-end;">
-                            <button type="submit" class="bph-btn bph-btn-primary">${%Filter}</button>
-                            <a href="buildParameterHistory" class="bph-btn bph-btn-secondary" style="text-decoration: none; line-height: 20px;">${%Reset}</a>
+                            <button type="submit" class="bph-btn bph-btn-primary">${com.siruoren.buildparameterhistory.Messages.Filter_Button()}</button>
+                            <a href="buildParameterHistory" class="bph-btn bph-btn-secondary" style="text-decoration: none; line-height: 20px;">${com.siruoren.buildparameterhistory.Messages.Filter_Reset()}</a>
                         </div>
                     </div>
                 </form>
@@ -269,44 +269,44 @@
 
             <j:if test="${hasActiveFilters}">
                 <div class="bph-active-filters">
-                    <strong>${%Active Filters}:</strong>
+                    <strong>${com.siruoren.buildparameterhistory.Messages.Filter_Active_Filters()}:</strong>
                     <j:if test="${!empty resultFilter and resultFilter != 'ALL'}">
-                        <span>${%Result}: ${resultFilter}</span>
+                        <span>${com.siruoren.buildparameterhistory.Messages.Table_Header_Result()}: ${resultFilter}</span>
                     </j:if>
                     <j:if test="${!empty searchKeyword}">
-                        <span>${%Search}: ${searchKeyword}</span>
+                        <span>${com.siruoren.buildparameterhistory.Messages.Filter_Global_Search()}: ${searchKeyword}</span>
                     </j:if>
                     <j:if test="${!empty parameterName}">
-                        <span>${%Param Name}: ${parameterName}</span>
+                        <span>${com.siruoren.buildparameterhistory.Messages.Filter_Parameter_Name()}: ${parameterName}</span>
                     </j:if>
                     <j:if test="${!empty parameterValue}">
-                        <span>${%Param Value}: ${parameterValue}</span>
+                        <span>${com.siruoren.buildparameterhistory.Messages.Filter_Parameter_Value()}: ${parameterValue}</span>
                     </j:if>
                 </div>
             </j:if>
 
             <div class="bph-stats">
-                ${%Showing %d filtered records.}
+                ${com.siruoren.buildparameterhistory.Messages.Filter_Showing_Filtered_Records(filteredRecords.size())}
             </div>
 
             <div class="bph-table-container">
                 <j:choose>
                     <j:when test="${empty filteredRecords}">
                         <div class="bph-empty">
-                            ${%No records match the current filter criteria.}
+                            ${com.siruoren.buildparameterhistory.Messages.Filter_No_Records()}
                         </div>
                     </j:when>
                     <j:otherwise>
                         <table class="bph-table">
                             <thead>
                                 <tr>
-                                    <th>${%Job Name}</th>
-                                    <th>${%Build ID}</th>
-                                    <th>${%Start Time}</th>
-                                    <th>${%End Time}</th>
-                                    <th>${%Duration}</th>
-                                    <th>${%Result}</th>
-                                    <th>${%Parameters}</th>
+                                    <th>${com.siruoren.buildparameterhistory.Messages.Table_Header_Job_Name()}</th>
+                                    <th>${com.siruoren.buildparameterhistory.Messages.Table_Header_Build_ID()}</th>
+                                    <th>${com.siruoren.buildparameterhistory.Messages.Table_Header_Start_Time()}</th>
+                                    <th>${com.siruoren.buildparameterhistory.Messages.Table_Header_End_Time()}</th>
+                                    <th>${com.siruoren.buildparameterhistory.Messages.Table_Header_Duration()}</th>
+                                    <th>${com.siruoren.buildparameterhistory.Messages.Table_Header_Result()}</th>
+                                    <th>${com.siruoren.buildparameterhistory.Messages.Table_Header_Parameters()}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -324,19 +324,19 @@
                                         <td>
                                             <j:choose>
                                                 <j:when test="${record.result == 'SUCCESS'}">
-                                                    <span class="bph-result bph-result-SUCCESS">${record.result}</span>
+                                                    <span class="bph-result bph-result-SUCCESS">${com.siruoren.buildparameterhistory.Messages.Result_Success()}</span>
                                                 </j:when>
                                                 <j:when test="${record.result == 'FAILURE'}">
-                                                    <span class="bph-result bph-result-FAILURE">${record.result}</span>
+                                                    <span class="bph-result bph-result-FAILURE">${com.siruoren.buildparameterhistory.Messages.Result_Failure()}</span>
                                                 </j:when>
                                                 <j:when test="${record.result == 'UNSTABLE'}">
-                                                    <span class="bph-result bph-result-UNSTABLE">${record.result}</span>
+                                                    <span class="bph-result bph-result-UNSTABLE">${com.siruoren.buildparameterhistory.Messages.Result_Unstable()}</span>
                                                 </j:when>
                                                 <j:when test="${record.result == 'ABORTED'}">
-                                                    <span class="bph-result bph-result-ABORTED">${record.result}</span>
+                                                    <span class="bph-result bph-result-ABORTED">${com.siruoren.buildparameterhistory.Messages.Result_Aborted()}</span>
                                                 </j:when>
                                                 <j:when test="${record.result == 'NOT_BUILT'}">
-                                                    <span class="bph-result bph-result-NOT_BUILT">${record.result}</span>
+                                                    <span class="bph-result bph-result-NOT_BUILT">${com.siruoren.buildparameterhistory.Messages.Result_NotBuilt()}</span>
                                                 </j:when>
                                                 <j:otherwise>
                                                     <span class="bph-result bph-result-default">${record.result}</span>
@@ -346,12 +346,12 @@
                                         <td class="bph-params">
                                             <j:choose>
                                                 <j:when test="${empty record.parameters}">
-                                                    <span style="color: #6c757d;">${%No parameters}</span>
+                                                    <span style="color: #6c757d;">${com.siruoren.buildparameterhistory.Messages.Table_No_Parameters()}</span>
                                                 </j:when>
                                                 <j:otherwise>
                                                     <j:forEach var="param" items="${record.parameters}" varStatus="status">
                                                         <div class="bph-param-item">
-                                                            <span class="bph-param-index">${%Param %d}</span>
+                                                            <span class="bph-param-index">${com.siruoren.buildparameterhistory.Messages.Table_Param_Index(status.index + 1)}</span>
                                                             <span class="bph-param-name">${param.name}：</span>
                                                             <span class="bph-param-value">${param.value}</span>
                                                         </div>

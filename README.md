@@ -54,7 +54,9 @@ The plugin automatically adapts to your browser's language setting:
 | English (default) | English |
 | Chinese (zh-CN) | 简体中文 |
 
-No manual configuration needed - the plugin detects `Accept-Language` header and switches accordingly.
+No manual configuration needed - the plugin detects `Accept-Language` header and switches accordingly. The Jelly template uses the generated `com.siruoren.buildparameterhistory.Messages` class for i18n resolution, which correctly handles locale lookup at runtime.
+
+**Resource File Encoding**: The `Messages_zh_CN.properties` file uses UTF-8 encoding for proper Chinese character rendering in all browser environments.
 
 ### Record Management
 
