@@ -4,7 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.0.0-SNAPSHOT] - 2026-05-19
+## [1.0.0] - 2026-05-19
+
+### Fixed
+- **Page menu and filter text blank**: Fixed issue where all UI text (menu items, filter labels, buttons) appeared blank in the build parameter history page
+  - Root cause: JEXL expression parser in Jenkins Jelly templates cannot resolve full-qualified class method calls like `${com.siruoren.buildparameterhistory.Messages.xxx()}`
+  - Solution: Migrated to Jenkins standard `${%key}` syntax for message resolution in Jelly templates
+  - Created localized properties files for each Jelly template:
+    - `index.properties` / `index_zh_CN.properties` for main history page
+    - `filterResults.properties` / `filterResults_zh_CN.properties` for filter results page
+  - Updated all message references in `index.jelly` and `filterResults.jelly` from `${com.siruoren.buildparameterhistory.Messages.xxx()}` to `${%xxx}`
+  - Properties files now use dot-separated keys (e.g., `Filter.Records`) matching the `${%key}` syntax
 
 ### Added
 - **Unit tests**: Comprehensive test suite (57 tests) covering:
@@ -21,18 +31,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
     - Confirmation dialogs, empty state messages
 - **Build result localization**: Filter dropdown and table display now show translated result text
 
-### Fixed
-- **Duplicate method issue**: Merged duplicate `getRecordsForJob()` methods by delegation pattern
-- **Missing method closure**: Fixed syntax error in `getRecordsForJob(File, String)` method body
-- **Code deduplication**: Refactored `filterRecords()` to delegate to `getFilteredRecordsForJob()`, reducing ~40 lines of duplicate code
-- **i18n not rendering in browser**: Jelly `${%Key}` cross-package reference (`${%com.siruoren.buildparameterhistory.Messages.Key}`) does not work in Jenkins. Changed to direct Messages class method calls (`${com.siruoren.buildparameterhistory.Messages.Key_Name()}`) which correctly resolves locale at runtime
-- **Chinese locale displaying blank content**: Converted `Messages_zh_CN.properties` from Unicode escape format to UTF-8 encoding to ensure proper rendering in Chinese browser environments
-
 ### Changed
 - All hardcoded English text in UI replaced with internationalization via Messages class method calls
-- Jelly template now uses generated `com.siruoren.buildparameterhistory.Messages` class for i18n resolution
+- Jelly template now uses Jenkins standard `${%key}` syntax for i18n resolution, which correctly loads messages from properties files in the same directory
 
-## [1.0.0-SNAPSHOT] - 2026-05-18
+## [1.0.0] - 2026-05-18
 
 ### Added
 - Automatic recording of build parameters for each build execution
