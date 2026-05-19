@@ -1,150 +1,154 @@
-# Build Parameter History Plugin
+# Build Parameter History Plugin（构建参数历史插件）
 
-A Jenkins plugin that records and displays build parameter history for Jenkins jobs.
+一个 Jenkins 插件，用于记录和显示 Jenkins 任务的构建参数历史。
 
-## Features
+## 功能特性
 
-- Automatically records build parameters for each build execution
-- Displays parameter history in a clean, searchable table view
-- Filter records by build result, parameter name, parameter value
-- Global search across all fields
-- Paginated display with configurable page size
-- Download history file via API or UI button
-- Automatic cleanup: keeps only the latest 200 records per job
-- Supports all standard Jenkins build parameters
-- **Internationalization**: Full support for Chinese and English based on browser language settings
-- **Record selection & batch delete**: Select multiple records and delete them in batch
-- **Clear history**: Option to clear all build parameter history for a job
+- 自动记录每次构建执行的构建参数
+- 以简洁、可搜索的表格视图显示参数历史
+- 按构建结果、参数名称、参数值筛选记录
+- 全局搜索所有字段
+- 分页显示，支持配置每页大小
+- 通过 API 或 UI 按钮下载历史文件
+- 自动清理：每个任务只保留最近 200 条记录
+- 支持所有标准 Jenkins 构建参数
+- **国际化支持**：根据浏览器语言设置自动切换中文和英文
+- **记录选择与批量删除**：选择多条记录并批量删除
+- **清除历史**：选项清除任务的所有构建参数历史
 
-## Installation
+## 安装方法
 
-1. Build the plugin:
+1. 构建插件：
    ```bash
    mvn clean package
    ```
 
-2. The `.hpi` file will be generated in the `target/` directory
+2. `.hpi` 文件将生成在 `target/` 目录下
 
-3. Install via Jenkins web UI:
-   - Go to **Manage Jenkins** → **Plugins** → **Advanced settings**
-   - Upload the `.hpi` file or point to the generated file
+3. 通过 Jenkins Web UI 安装：
+   - 进入 **Manage Jenkins** → **Plugins** → **Advanced settings**
+   - 上传 `.hpi` 文件或指定生成的文件路径
 
-## Usage
+## 使用说明
 
-### View History
+### 查看历史记录
 
-1. Navigate to any Jenkins job with build parameters
-2. Click **"Build Parameter History"** in the left sidebar
-3. View the history table with all recorded builds
+1. 导航到任何带有构建参数的 Jenkins 任务
+2. 点击左侧边栏中的 **"Build Parameter History"（构建参数历史）**
+3. 查看包含所有已记录构建的历史表格
 
-### Filter Records
+### 筛选记录
 
-Use the filter panel to narrow down results:
-- **Build Result**: Filter by Success, Failure, Unstable, Aborted, Not Built
-- **Parameter Name**: Search by parameter name
-- **Parameter Value**: Search by parameter value
-- **Global Search**: Search across all fields
+使用筛选面板缩小结果范围：
+- **Build Result（构建结果）**：按 Success、Failure、Unstable、Aborted、Not Built 筛选
+- **Parameter Name（参数名称）**：按参数名称搜索
+- **Parameter Value（参数值）**：按参数值搜索
+- **Global Search（全局搜索）**：搜索所有字段
 
-### Internationalization (i18n)
+### 国际化支持
 
-The plugin automatically adapts to your browser's language setting:
+插件会自动适配浏览器的语言设置：
 
-| Browser Language | Display Language |
-|------------------|------------------|
-| English (default) | English |
+| 浏览器语言 | 显示语言 |
+|------------|----------|
+| English (默认) | 英文 |
 | Chinese (zh-CN) | 简体中文 |
 
-No manual configuration needed - the plugin detects `Accept-Language` header and switches accordingly. The Jelly templates use Jenkins standard `${%key}` syntax for i18n resolution, which loads messages from localized properties files (`index.properties`, `index_zh_CN.properties`, `filterResults.properties`, `filterResults_zh_CN.properties`) in the same directory as the Jelly files.
+无需手动配置 - 插件会检测 `Accept-Language` 请求头并相应切换。Jelly 模板使用 Jenkins 标准的 `${%key}` 语法进行国际化解析，从 Jelly 文件同一目录下的本地化属性文件（`index.properties`、`index_zh_CN.properties`、`filterResults.properties`、`filterResults_zh_CN.properties`）加载消息。
 
-**Resource File Encoding**: All properties files use UTF-8 encoding for proper character rendering in all browser environments.
+**资源文件编码**：所有属性文件均使用 UTF-8 编码，确保在所有浏览器环境中正确显示字符。
 
-### Record Management
+### 记录管理
 
-- **Batch Delete**: Select records using checkboxes, then click "Delete Selected"
-- **Select All**: Use the checkbox in table header to select/deselect all records on current page
-- **Clear All**: Click "Clear All History" button to remove all records for the job
+- **批量删除**：使用复选框选择记录，然后点击 "Delete Selected"（删除所选）
+- **全选**：使用表格标题中的复选框选择/取消选择当前页的所有记录
+- **清除全部**：点击 "Clear All History"（清除所有历史）按钮删除任务的所有记录
 
-### Download History
+### 下载历史
 
-#### Via Web UI
-Click the **"Download History"** button at the bottom of the history page.
+#### 通过 Web UI
+点击历史页面底部的 **"Download History"（下载历史）** 按钮。
 
-#### Via API
-Download the history file using curl:
+#### 通过 API
+使用 curl 下载历史文件：
 
 ```bash
 curl -u username:api-token -o history.txt \
   "http://jenkins-url/job/your-job/buildParameterHistory/downloadHistory"
 ```
 
-## API Endpoints
+## API 端点
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/job/{job}/buildParameterHistory` | GET | View history page |
-| `/job/{job}/buildParameterHistory/downloadHistory` | POST | Download history file |
-| `/job/{job}/buildParameterHistory/filterResults` | POST | Filter records with criteria |
-| `/job/{job}/buildParameterHistory/deleteRecords` | POST | Delete selected records |
-| `/job/{job}/buildParameterHistory/clearHistory` | POST | Clear all history for job |
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/job/{job}/buildParameterHistory` | GET | 查看历史页面 |
+| `/job/{job}/buildParameterHistory/downloadHistory` | POST | 下载历史文件 |
+| `/job/{job}/buildParameterHistory/filterResults` | POST | 按条件筛选记录 |
+| `/job/{job}/buildParameterHistory/deleteRecords` | POST | 删除所选记录 |
+| `/job/{job}/buildParameterHistory/clearHistory` | POST | 清除任务的所有历史 |
 
-## Configuration
+## 配置
 
-### Record Limit
+### 记录限制
 
-By default, the plugin keeps only the **latest 200 records** per job. Older records are automatically removed when new builds are recorded.
+默认情况下，插件每个任务只保留 **最近 200 条记录**。当有新构建记录时，会自动删除旧记录。
 
-To change this limit, modify the `MAX_RECORDS` constant in `BuildParameterHistoryService.java`.
+要更改此限制，请修改 `BuildParameterHistoryService.java` 中的 `MAX_RECORDS` 常量。
 
-### History File
+### 历史文件
 
-Records are stored in each job's directory as a file named `param_history`.
+记录存储在每个任务的目录中，文件名为 `param_history`。
 
-## Building
+## 构建
 
 ```bash
-# Build the plugin
+# 构建插件
 mvn clean package
 
-# Run tests
+# 运行测试
 mvn test
 
-# Skip tests
+# 跳过测试
 mvn package -DskipTests
 ```
 
-## Testing
+## 测试
 
-The project includes a comprehensive unit test suite with **57 test cases**:
+项目包含全面的单元测试套件，共 **57 个测试用例**：
 
-### Test Classes
+### 测试类
 
-| Test Class | Tests | Coverage |
-|------------|-------|----------|
-| `BuildParameterRecordTest` | 21 | Model: constructors, getters/setters, safe URL, duration, formatted time, ParameterEntry |
-| `BuildParameterHistoryServiceTest` | 36 | Service: format/parse round-trip, filter logic (result/keyword/param name/value), file I/O, cache expiry, max records config, singleton |
+| 测试类 | 测试数 | 覆盖范围 |
+|--------|--------|----------|
+| `BuildParameterRecordTest` | 21 | 模型：构造函数、getter/setter、安全 URL、时长、格式化时间、ParameterEntry |
+| `BuildParameterHistoryServiceTest` | 36 | 服务：格式/解析往返、筛选逻辑（结果/关键词/参数名称/值）、文件 I/O、缓存过期、最大记录数配置、单例模式 |
 
-### Running Tests
+### 运行测试
 
 ```bash
-# Run all tests
+# 运行所有测试
 mvn test -Denforcer.skip=true
 
-# Run a specific test class
+# 运行特定测试类
 mvn test -Denforcer.skip=true -Dtest=BuildParameterRecordTest
 
-# Run with verbose output
+# 带详细输出运行
 mvn test -Denforcer.skip=true -X
 ```
 
-## Requirements
+## 需求
 
-- Jenkins 2.479.2 or higher
-- Java 11 or higher
+- Jenkins 2.479.2 或更高版本
+- Java 11 或更高版本
 
-## License
+## 许可证
 
-MIT License - see LICENSE file for details
+MIT License - 详见 LICENSE 文件
 
-## Version
+## 版本
 
 1.0.0
+
+---
+
+*[English Version](README_en.md)*

@@ -11,7 +11,7 @@
 
     <groupId>com.siruoren</groupId>
     <artifactId>build-parameter-history</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>hpi</packaging>
 
     <name>Build Parameter History Plugin</name>

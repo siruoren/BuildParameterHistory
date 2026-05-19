@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.0.0-SNAPSHOT] - 2026-05-19
+## [1.0.0] - 2026-05-19
 
 ### Fixed
 - **Page menu and filter text blank**: Fixed issue where all UI text (menu items, filter labels, buttons) appeared blank in the build parameter history page
@@ -35,7 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - All hardcoded English text in UI replaced with internationalization via Messages class method calls
 - Jelly template now uses Jenkins standard `${%key}` syntax for i18n resolution, which correctly loads messages from properties files in the same directory
 
-## [1.0.0-SNAPSHOT] - 2026-05-18
+## [1.0.0] - 2026-05-18
 
 ### Added
 - Automatic recording of build parameters for each build execution
