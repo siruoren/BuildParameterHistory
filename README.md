@@ -54,9 +54,9 @@ The plugin automatically adapts to your browser's language setting:
 | English (default) | English |
 | Chinese (zh-CN) | 简体中文 |
 
-No manual configuration needed - the plugin detects `Accept-Language` header and switches accordingly. The Jelly template uses the generated `com.siruoren.buildparameterhistory.Messages` class for i18n resolution, which correctly handles locale lookup at runtime.
+No manual configuration needed - the plugin detects `Accept-Language` header and switches accordingly. The Jelly templates use Jenkins standard `${%key}` syntax for i18n resolution, which loads messages from localized properties files (`index.properties`, `index_zh_CN.properties`, `filterResults.properties`, `filterResults_zh_CN.properties`) in the same directory as the Jelly files.
 
-**Resource File Encoding**: The `Messages_zh_CN.properties` file uses UTF-8 encoding for proper Chinese character rendering in all browser environments.
+**Resource File Encoding**: All properties files use UTF-8 encoding for proper character rendering in all browser environments.
 
 ### Record Management
 
