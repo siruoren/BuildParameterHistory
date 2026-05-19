@@ -8,9 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -181,25 +179,22 @@ public class BuildParameterHistoryAction implements hudson.model.Action {
         if (parameterName == null) parameterName = "";
         if (parameterValue == null) parameterValue = "";
 
-        List<BuildParameterRecord> allRecords = getRecords();
-        List<BuildParameterRecord> filteredRecords = filterRecords(allRecords, resultFilter, searchKeyword, parameterName, parameterValue);
-
         int page = 1;
         try {
             page = Integer.parseInt(pageParam);
         } catch (NumberFormatException e) {
             page = 1;
         }
+        if (page < 1) page = 1;
 
-        int totalRecords = filteredRecords.size();
+        BuildParameterHistoryService service = BuildParameterHistoryService.getInstance();
+        int totalRecords = service.getFilteredRecordCount(job.getFullName(), resultFilter, searchKeyword, parameterName, parameterValue);
         int totalPages = (int) Math.ceil((double) totalRecords / PAGE_SIZE);
         if (totalPages == 0) totalPages = 1;
-        if (page < 1) page = 1;
         if (page > totalPages) page = totalPages;
 
-        int start = (page - 1) * PAGE_SIZE;
-        int end = Math.min(start + PAGE_SIZE, totalRecords);
-        List<BuildParameterRecord> pageRecords = start < totalRecords ? new ArrayList<>(filteredRecords.subList(start, end)) : Collections.emptyList();
+        List<BuildParameterRecord> pageRecords = service.getFilteredRecordsForJob(
+                job.getFullName(), resultFilter, searchKeyword, parameterName, parameterValue, page, PAGE_SIZE);
 
         boolean hasFilter = !resultFilter.isEmpty() || !searchKeyword.isEmpty() || !parameterName.isEmpty() || !parameterValue.isEmpty();
 
@@ -216,59 +211,6 @@ public class BuildParameterHistoryAction implements hudson.model.Action {
         req.setAttribute("bph.hasDeletePermission", hasDeletePermission());
 
         req.getView(this, "index.jelly").forward(req, rsp);
-    }
-
-    private List<BuildParameterRecord> filterRecords(List<BuildParameterRecord> records, String resultFilter, String searchKeyword, String parameterName, String parameterValue) {
-        List<BuildParameterRecord> filtered = new ArrayList<>(records);
-
-        if (!resultFilter.isEmpty() && !"ALL".equalsIgnoreCase(resultFilter)) {
-            filtered.removeIf(r -> !resultFilter.equalsIgnoreCase(r.getResult()));
-        }
-
-        if (!searchKeyword.isEmpty()) {
-            String keyword = searchKeyword.toLowerCase();
-            filtered.removeIf(r -> !matchesSearchKeyword(r, keyword));
-        }
-
-        if (!parameterName.isEmpty()) {
-            String pName = parameterName.toLowerCase();
-            filtered.removeIf(r -> !matchesParameterName(r, pName));
-        }
-
-        if (!parameterValue.isEmpty()) {
-            String pValue = parameterValue.toLowerCase();
-            filtered.removeIf(r -> !matchesParameterValue(r, pValue));
-        }
-
-        return filtered;
-    }
-
-    private boolean matchesSearchKeyword(BuildParameterRecord record, String keyword) {
-        if (record.getJobName().toLowerCase().contains(keyword)) return true;
-        if (record.getBuildId().toLowerCase().contains(keyword)) return true;
-        if (record.getResult().toLowerCase().contains(keyword)) return true;
-        if (record.getFormattedStartTime().toLowerCase().contains(keyword)) return true;
-        if (record.getFormattedEndTime().toLowerCase().contains(keyword)) return true;
-        if (record.getDuration().toLowerCase().contains(keyword)) return true;
-        for (BuildParameterRecord.ParameterEntry param : record.getParameters()) {
-            if (param.getName().toLowerCase().contains(keyword)) return true;
-            if (param.getValue().toLowerCase().contains(keyword)) return true;
-        }
-        return false;
-    }
-
-    private boolean matchesParameterName(BuildParameterRecord record, String paramName) {
-        for (BuildParameterRecord.ParameterEntry param : record.getParameters()) {
-            if (param.getName().toLowerCase().contains(paramName)) return true;
-        }
-        return false;
-    }
-
-    private boolean matchesParameterValue(BuildParameterRecord record, String paramValue) {
-        for (BuildParameterRecord.ParameterEntry param : record.getParameters()) {
-            if (param.getValue().toLowerCase().contains(paramValue)) return true;
-        }
-        return false;
     }
 
     public String buildPageUrl(int page, String resultFilter, String searchKeyword, String parameterName, String parameterValue) {

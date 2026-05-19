@@ -101,7 +101,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
         BuildParameterHistoryThreadPool.getInstance().submit(() -> {
             try {
                 BuildParameterHistoryService service = BuildParameterHistoryService.getInstance();
-                List<BuildParameterRecord> existingRecords = service.getRecordsForJob(finalJobName);
+                List<BuildParameterRecord> existingRecords = service.getRecordsForJob(finalHistoryFile, finalJobName);
 
                 List<BuildParameterRecord.ParameterEntry> paramsToUse = finalParameters;
                 if (existingRecords != null && !existingRecords.isEmpty()) {

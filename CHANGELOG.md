@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.0-SNAPSHOT] - 2026-05-19
+
+### Added
+- **Unit tests**: Comprehensive test suite (57 tests) covering:
+  - `BuildParameterRecordTest` (21 tests): Constructor, getters/setters, safe URL, duration, formatted time, ParameterEntry
+  - `BuildParameterHistoryServiceTest` (36 tests): Record format/parse round-trip, filter logic (result/keyword/param name/value), file I/O, caching, max records config
+- **Internationalization (i18n) support**: Full Chinese and English localization
+  - Auto-detect browser language setting (`Accept-Language` header)
+  - English: `Messages.properties`
+  - Chinese: `Messages_zh_CN.properties`
+  - All UI elements localized including:
+    - Page title, filter labels, placeholders
+    - Table headers, build result options (Success/Failure/Unstable/Aborted/Not Built)
+    - Pagination buttons, action buttons, selection toolbar
+    - Confirmation dialogs, empty state messages
+- **Build result localization**: Filter dropdown and table display now show translated result text
+
+### Fixed
+- **Duplicate method issue**: Merged duplicate `getRecordsForJob()` methods by delegation pattern
+- **Missing method closure**: Fixed syntax error in `getRecordsForJob(File, String)` method body
+- **Code deduplication**: Refactored `filterRecords()` to delegate to `getFilteredRecordsForJob()`, reducing ~40 lines of duplicate code
+
+### Changed
+- All hardcoded English text in UI replaced with internationalization keys (`${%Key.Name}`)
+- Jelly template now uses Jenkins localizer for automatic language switching
+
 ## [1.0.0-SNAPSHOT] - 2026-05-18
 
 ### Added

@@ -273,24 +273,16 @@ public class BuildParameterHistoryService {
 
     public List<BuildParameterRecord> getRecordsForJob(String jobName) {
         File historyFile = getHistoryFile(jobName);
+        return getRecordsForJob(historyFile, jobName);
+    }
+
+    public List<BuildParameterRecord> getRecordsForJob(File historyFile, String jobName) {
         if (historyFile == null || !historyFile.exists()) {
             return new ArrayList<>();
         }
 
-        synchronized (recordsCache) {
-            CachedRecords cached = recordsCache.get(jobName);
-            if (cached != null && !cached.isExpired() && !cached.isFileChanged(historyFile)) {
-                return new ArrayList<>(cached.records);
-            }
-        }
-
         List<BuildParameterRecord> records = readAllRecordsFromFile(historyFile, jobName);
-
-        synchronized (recordsCache) {
-            recordsCache.put(jobName, new CachedRecords(records, historyFile.lastModified()));
-        }
-
-        return new ArrayList<>(records);
+        return records;
     }
 
     public List<BuildParameterRecord> getRecordsForJob(String jobName, int page, int pageSize) {
@@ -486,20 +478,7 @@ public class BuildParameterHistoryService {
     public List<BuildParameterRecord> filterRecords(String jobName, String resultFilter,
                                                      String searchKeyword, String parameterName,
                                                      String parameterValue) {
-        List<BuildParameterRecord> records;
-
-        if (jobName != null && !jobName.trim().isEmpty()) {
-            records = getRecordsForJob(jobName);
-        } else {
-            records = getAllRecords();
-        }
-
-        return records.stream()
-                .filter(r -> filterByResult(r, resultFilter))
-                .filter(r -> filterBySearchKeyword(r, searchKeyword))
-                .filter(r -> filterByParameterName(r, parameterName))
-                .filter(r -> filterByParameterValue(r, parameterValue))
-                .collect(Collectors.toList());
+        return getFilteredRecordsForJob(jobName, resultFilter, searchKeyword, parameterName, parameterValue, 1, Integer.MAX_VALUE);
     }
 
     private boolean filterByResult(BuildParameterRecord record, String resultFilter) {
