@@ -1,7 +1,6 @@
 package com.siruoren.buildparameterhistory;
 
 import hudson.Extension;
-import hudson.model.Cause;
 import hudson.model.ParameterValue;
 import hudson.model.ParametersAction;
 import hudson.model.Run;
@@ -20,20 +19,24 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
 
     @Override
     public void onStarted(Run<?, ?> run, TaskListener listener) {
-        try {
-            recordBuildStart(run);
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to record build start for " + run.getFullDisplayName(), e);
-        }
+        BuildParameterHistoryThreadPool.getInstance().submit(() -> {
+            try {
+                recordBuildStart(run);
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Failed to record build start for " + run.getFullDisplayName(), e);
+            }
+        });
     }
 
     @Override
     public void onCompleted(Run<?, ?> run, @Nonnull TaskListener listener) {
-        try {
-            recordBuildCompletion(run);
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to record build completion for " + run.getFullDisplayName(), e);
-        }
+        BuildParameterHistoryThreadPool.getInstance().submit(() -> {
+            try {
+                recordBuildCompletion(run);
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Failed to record build completion for " + run.getFullDisplayName(), e);
+            }
+        });
     }
 
     private void recordBuildStart(Run<?, ?> run) {
@@ -41,7 +44,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
 
         String jobName = run.getParent().getFullName();
         String buildId = String.valueOf(run.getNumber());
-        String buildUrl = run.getUrl();
+        String buildUrl = safeGetBuildUrl(run);
 
         List<BuildParameterRecord.ParameterEntry> parameters = extractParameters(run);
 
@@ -75,11 +78,12 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
         }
 
         String result = run.getResult() != null ? run.getResult().toString() : "UNKNOWN";
+        String buildUrl = safeGetBuildUrl(run);
 
         BuildParameterRecord record = new BuildParameterRecord(
                 jobName,
                 buildId,
-                run.getUrl(),
+                buildUrl,
                 run.getStartTimeInMillis(),
                 System.currentTimeMillis(),
                 result,
@@ -89,6 +93,18 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
         service.updateRecord(record);
         LOGGER.log(Level.FINE, "Recorded build completion: {0} #{1} -> {2}",
                 new Object[]{jobName, buildId, result});
+    }
+
+    private String safeGetBuildUrl(Run<?, ?> run) {
+        try {
+            String url = run.getUrl();
+            if (url != null && !url.isEmpty()) {
+                return url;
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.FINE, "Failed to get build URL for " + run.getFullDisplayName(), e);
+        }
+        return run.getParent().getUrl() + run.getNumber() + "/";
     }
 
     private BuildParameterRecord findExistingRecord(BuildParameterHistoryService service,
@@ -108,10 +124,12 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
         ParametersAction paramsAction = run.getAction(ParametersAction.class);
         if (paramsAction != null) {
             List<ParameterValue> paramValues = paramsAction.getParameters();
-            for (ParameterValue paramValue : paramValues) {
-                String name = paramValue.getName();
-                String value = paramValue.getValue() != null ? paramValue.getValue().toString() : "";
-                parameters.add(new BuildParameterRecord.ParameterEntry(name, value));
+            if (paramValues != null) {
+                for (ParameterValue paramValue : paramValues) {
+                    String name = paramValue.getName();
+                    String value = paramValue.getValue() != null ? paramValue.getValue().toString() : "";
+                    parameters.add(new BuildParameterRecord.ParameterEntry(name, value));
+                }
             }
         }
 

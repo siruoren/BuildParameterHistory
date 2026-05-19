@@ -314,7 +314,7 @@
                                     <tr>
                                         <td>${record.jobName}</td>
                                         <td>
-                                            <a href="${rootURL}/${record.buildUrl}" class="bph-build-link" target="_blank">
+                                            <a href="${rootURL}/${record.safeBuildUrl}" class="bph-build-link" target="_blank" rel="noopener noreferrer">
                                                 #${record.buildId}
                                             </a>
                                         </td>

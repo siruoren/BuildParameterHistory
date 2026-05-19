@@ -2,6 +2,9 @@ package com.siruoren.buildparameterhistory;
 
 import hudson.Util;
 import java.io.Serializable;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -9,6 +12,10 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class BuildParameterRecord implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd HH:mm:ss")
+            .withZone(ZoneId.systemDefault());
 
     private String jobName;
     private String buildId;
@@ -53,6 +60,18 @@ public class BuildParameterRecord implements Serializable {
 
     public String getBuildUrl() {
         return buildUrl;
+    }
+
+    public String getSafeBuildUrl() {
+        if (buildUrl == null || buildUrl.isEmpty()) {
+            return "";
+        }
+        String trimmed = buildUrl.trim();
+        String lower = trimmed.toLowerCase();
+        if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
+            return "";
+        }
+        return trimmed;
     }
 
     public void setBuildUrl(String buildUrl) {
@@ -109,14 +128,14 @@ public class BuildParameterRecord implements Serializable {
 
     public String getFormattedStartTime() {
         if (startTime > 0) {
-            return new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date(startTime));
+            return DATE_FORMATTER.format(Instant.ofEpochMilli(startTime));
         }
         return "N/A";
     }
 
     public String getFormattedEndTime() {
         if (endTime > 0) {
-            return new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date(endTime));
+            return DATE_FORMATTER.format(Instant.ofEpochMilli(endTime));
         }
         return "N/A";
     }

@@ -98,6 +98,11 @@
             .bph-btn-danger:hover {
                 background-color: #c82333;
             }
+            .bph-btn-danger:disabled {
+                background-color: #e4606d;
+                opacity: 0.65;
+                cursor: not-allowed;
+            }
             .bph-btn-secondary {
                 background-color: #6c757d;
                 color: white;
@@ -147,6 +152,9 @@
             }
             .bph-table tr:nth-child(even):hover td {
                 background-color: #f1f3f5;
+            }
+            .bph-table tr.bph-selected td {
+                background-color: #fff3cd !important;
             }
             .bph-result {
                 display: inline-block;
@@ -198,6 +206,7 @@
                 gap: 8px;
                 margin-top: 10px;
                 flex-wrap: wrap;
+                align-items: center;
             }
             .bph-stats {
                 font-size: 12px;
@@ -227,6 +236,27 @@
                 color: #6c757d;
                 margin: 0 10px;
             }
+            .bph-select-bar {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                background: #fff3cd;
+                border: 1px solid #ffc107;
+                border-radius: 4px;
+                margin-bottom: 10px;
+                font-size: 13px;
+            }
+            .bph-select-bar .bph-selected-count {
+                font-weight: 600;
+                color: #856404;
+            }
+            .bph-checkbox {
+                width: 16px;
+                height: 16px;
+                cursor: pointer;
+                accent-color: #4b758b;
+            }
             @media screen and (max-width: 768px) {
                 .bph-filter-item {
                     min-width: 120px;
@@ -253,6 +283,7 @@
         <j:set var="totalPages" value="${request.getAttribute('bph.totalPages')}"/>
         <j:set var="totalRecords" value="${request.getAttribute('bph.totalRecords')}"/>
         <j:set var="hasFilter" value="${request.getAttribute('bph.hasFilter')}"/>
+        <j:set var="hasDeletePermission" value="${request.getAttribute('bph.hasDeletePermission')}"/>
 
         <div class="bph-container">
             <div class="bph-header">
@@ -356,6 +387,18 @@
                 </j:choose>
             </div>
 
+            <j:if test="${hasDeletePermission and totalRecords > 0}">
+                <div id="bphSelectBar" class="bph-select-bar" style="display:none;">
+                    <span class="bph-selected-count" id="bphSelectedCount">0</span>
+                    <span>${%items selected}</span>
+                    <form method="post" action="deleteRecords" style="display:inline;" id="bphDeleteForm">
+                        <input type="hidden" name="buildIdsStr" id="bphDeleteIdsInput" value=""/>
+                        <button type="submit" class="bph-btn bph-btn-danger" id="bphDeleteBtn" onclick="return confirm('${%Are you sure you want to delete the selected records?}')">${%Delete Selected}</button>
+                    </form>
+                    <button type="button" class="bph-btn bph-btn-secondary" onclick="bphClearSelection()">${%Cancel Selection}</button>
+                </div>
+            </j:if>
+
             <div class="bph-table-container">
                 <j:choose>
                     <j:when test="${totalRecords == 0}">
@@ -367,6 +410,11 @@
                         <table class="bph-table">
                             <thead>
                                 <tr>
+                                    <j:if test="${hasDeletePermission}">
+                                        <th style="width:40px;text-align:center;">
+                                            <input type="checkbox" class="bph-checkbox" id="bphSelectAll" title="${%Select All}" onclick="bphToggleSelectAll(this)"/>
+                                        </th>
+                                    </j:if>
                                     <th>${%Job Name}</th>
                                     <th>${%Build ID}</th>
                                     <th>${%Start Time}</th>
@@ -378,10 +426,15 @@
                             </thead>
                             <tbody>
                                 <j:forEach var="record" items="${pageRecords}">
-                                    <tr>
+                                    <tr data-build-id="${record.buildId}" class="bph-row">
+                                        <j:if test="${hasDeletePermission}">
+                                            <td style="text-align:center;">
+                                                <input type="checkbox" class="bph-checkbox bph-row-checkbox" value="${record.buildId}" onclick="bphToggleRow(this)"/>
+                                            </td>
+                                        </j:if>
                                         <td>${record.jobName}</td>
                                         <td>
-                                            <a href="${rootURL}/${record.buildUrl}" class="bph-build-link" target="_blank">
+                                            <a href="${rootURL}/${record.safeBuildUrl}" class="bph-build-link" target="_blank" rel="noopener noreferrer">
                                                 #${record.buildId}
                                             </a>
                                         </td>
@@ -466,10 +519,91 @@
 
             <div class="bph-actions">
                 <a href="downloadHistory" class="bph-btn bph-btn-primary" style="text-decoration: none;">
-                    Download History
+                    ${%Download History}
                 </a>
+                <j:if test="${hasDeletePermission}">
+                    <form method="post" action="clearHistory" style="display:inline;" onsubmit="return confirm('${%Are you sure you want to clear all build parameter history?}')">
+                        <button type="submit" class="bph-btn bph-btn-danger">${%Clear All History}</button>
+                    </form>
+                </j:if>
             </div>
         </div>
+
+        <script type="text/javascript">
+            function bphToggleSelectAll(checkbox) {
+                var checkboxes = document.querySelectorAll('.bph-row-checkbox');
+                for (var i = 0; i &lt; checkboxes.length; i++) {
+                    checkboxes[i].checked = checkbox.checked;
+                    bphUpdateRowStyle(checkboxes[i]);
+                }
+                bphUpdateSelectBar();
+            }
+
+            function bphToggleRow(checkbox) {
+                bphUpdateRowStyle(checkbox);
+                bphUpdateSelectAll();
+                bphUpdateSelectBar();
+            }
+
+            function bphUpdateRowStyle(checkbox) {
+                var row = checkbox.closest('tr');
+                if (row) {
+                    if (checkbox.checked) {
+                        row.classList.add('bph-selected');
+                    } else {
+                        row.classList.remove('bph-selected');
+                    }
+                }
+            }
+
+            function bphUpdateSelectAll() {
+                var selectAll = document.getElementById('bphSelectAll');
+                if (!selectAll) return;
+                var checkboxes = document.querySelectorAll('.bph-row-checkbox');
+                var checked = document.querySelectorAll('.bph-row-checkbox:checked');
+                selectAll.checked = checkboxes.length > 0 &amp;&amp; checkboxes.length === checked.length;
+                selectAll.indeterminate = checked.length > 0 &amp;&amp; checked.length &lt; checkboxes.length;
+            }
+
+            function bphUpdateSelectBar() {
+                var bar = document.getElementById('bphSelectBar');
+                var countEl = document.getElementById('bphSelectedCount');
+                var idsInput = document.getElementById('bphDeleteIdsInput');
+                var deleteBtn = document.getElementById('bphDeleteBtn');
+                if (!bar) return;
+
+                var checked = document.querySelectorAll('.bph-row-checkbox:checked');
+                var ids = [];
+                for (var i = 0; i &lt; checked.length; i++) {
+                    ids.push(checked[i].value);
+                }
+
+                countEl.textContent = ids.length;
+                idsInput.value = ids.join(',');
+
+                if (ids.length > 0) {
+                    bar.style.display = 'flex';
+                    deleteBtn.disabled = false;
+                } else {
+                    bar.style.display = 'none';
+                    deleteBtn.disabled = true;
+                }
+            }
+
+            function bphClearSelection() {
+                var checkboxes = document.querySelectorAll('.bph-row-checkbox');
+                for (var i = 0; i &lt; checkboxes.length; i++) {
+                    checkboxes[i].checked = false;
+                    bphUpdateRowStyle(checkboxes[i]);
+                }
+                var selectAll = document.getElementById('bphSelectAll');
+                if (selectAll) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                }
+                bphUpdateSelectBar();
+            }
+        </script>
     </l:main-panel>
 </l:layout>
 </j:jelly>

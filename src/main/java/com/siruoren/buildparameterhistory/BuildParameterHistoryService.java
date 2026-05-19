@@ -5,14 +5,21 @@ import hudson.model.Job;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.StringWriter;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -22,10 +29,36 @@ public class BuildParameterHistoryService {
 
     private static final Logger LOGGER = Logger.getLogger(BuildParameterHistoryService.class.getName());
     private static final String HISTORY_FILE = "param_history";
-    private static final int MAX_RECORDS = 200;
+    private static final int DEFAULT_MAX_RECORDS = 200;
+    private static final long CACHE_TTL_MS = 30_000;
 
     private static BuildParameterHistoryService instance;
     private final Object fileLock = new Object();
+
+    private final Map<String, CachedRecords> recordsCache = new HashMap<>();
+
+    private static class CachedRecords {
+        final List<BuildParameterRecord> records;
+        final long timestamp;
+        final long fileLastModified;
+
+        CachedRecords(List<BuildParameterRecord> records, long fileLastModified) {
+            this.records = records;
+            this.fileLastModified = fileLastModified;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() - timestamp > CACHE_TTL_MS;
+        }
+
+        boolean isFileChanged(File historyFile) {
+            if (historyFile == null || !historyFile.exists()) {
+                return true;
+            }
+            return historyFile.lastModified() != fileLastModified;
+        }
+    }
 
     private BuildParameterHistoryService() {
     }
@@ -35,6 +68,21 @@ public class BuildParameterHistoryService {
             instance = new BuildParameterHistoryService();
         }
         return instance;
+    }
+
+    public int getMaxRecords() {
+        String maxStr = System.getProperty("buildParameterHistory.maxRecords");
+        if (maxStr != null) {
+            try {
+                int val = Integer.parseInt(maxStr.trim());
+                if (val > 0) {
+                    return val;
+                }
+            } catch (NumberFormatException e) {
+                LOGGER.log(Level.WARNING, "Invalid system property buildParameterHistory.maxRecords: " + maxStr, e);
+            }
+        }
+        return DEFAULT_MAX_RECORDS;
     }
 
     public File getHistoryFile(String jobName) {
@@ -52,36 +100,35 @@ public class BuildParameterHistoryService {
 
     public void saveRecord(@NonNull BuildParameterRecord record) {
         synchronized (fileLock) {
-            try {
-                File historyFile = getHistoryFile(record.getJobName());
-                if (historyFile == null) {
-                    return;
-                }
+            File historyFile = getHistoryFile(record.getJobName());
+            if (historyFile == null) {
+                return;
+            }
 
+            try {
                 String line = formatRecord(record);
 
                 if (historyFile.exists()) {
-                    BufferedReader reader = new BufferedReader(new FileReader(historyFile));
                     StringWriter writer = new StringWriter();
-                    writer.write(line + "\n");
+                    writer.write(line);
+                    writer.write("\n");
 
-                    String existingLine;
-                    while ((existingLine = reader.readLine()) != null) {
-                        writer.write(existingLine + "\n");
+                    try (BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
+                        String existingLine;
+                        while ((existingLine = reader.readLine()) != null) {
+                            writer.write(existingLine);
+                            writer.write("\n");
+                        }
                     }
-                    reader.close();
 
-                    BufferedWriter bw = new BufferedWriter(new FileWriter(historyFile));
-                    bw.write(writer.toString());
-                    bw.close();
+                    writeWithFileLock(historyFile, writer.toString());
                 } else {
-                    BufferedWriter bw = new BufferedWriter(new FileWriter(historyFile));
-                    bw.write(line + "\n");
-                    bw.close();
+                    writeWithFileLock(historyFile, line + "\n");
                 }
 
-                // Auto-remove old records if exceeding max limit
                 trimOldRecords(historyFile);
+                invalidateCache(record.getJobName());
 
                 LOGGER.log(Level.FINE, "Saved build parameter record for {0} #{1}",
                         new Object[]{record.getJobName(), record.getBuildId()});
@@ -93,50 +140,63 @@ public class BuildParameterHistoryService {
 
     public void updateRecord(@NonNull BuildParameterRecord record) {
         synchronized (fileLock) {
-            try {
-                File historyFile = getHistoryFile(record.getJobName());
-                if (historyFile == null || !historyFile.exists()) {
-                    saveRecord(record);
-                    return;
-                }
+            File historyFile = getHistoryFile(record.getJobName());
+            if (historyFile == null || !historyFile.exists()) {
+                saveRecord(record);
+                return;
+            }
 
+            try {
                 String buildId = record.getBuildId();
                 String newLine = formatRecord(record);
                 boolean found = false;
 
-                BufferedReader reader = new BufferedReader(new FileReader(historyFile));
                 StringWriter writer = new StringWriter();
 
-                String existingLine;
-                while ((existingLine = reader.readLine()) != null) {
-                    String[] parts = existingLine.split("\\|", 3);
-                    if (parts.length >= 2 && parts[1].equals(buildId)) {
-                        if (!found) {
-                            writer.write(newLine + "\n");
-                            found = true;
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
+                    String existingLine;
+                    while ((existingLine = reader.readLine()) != null) {
+                        String[] parts = existingLine.split("\\|", 3);
+                        if (parts.length >= 2 && parts[1].equals(buildId)) {
+                            if (!found) {
+                                writer.write(newLine);
+                                writer.write("\n");
+                                found = true;
+                            }
+                        } else {
+                            writer.write(existingLine);
+                            writer.write("\n");
                         }
-                    } else {
-                        writer.write(existingLine + "\n");
                     }
                 }
-                reader.close();
 
                 if (!found) {
                     StringWriter writer2 = new StringWriter();
-                    writer2.write(newLine + "\n");
+                    writer2.write(newLine);
+                    writer2.write("\n");
                     writer2.write(writer.toString());
                     writer = writer2;
                 }
 
-                BufferedWriter bw = new BufferedWriter(new FileWriter(historyFile));
-                bw.write(writer.toString());
-                bw.close();
+                writeWithFileLock(historyFile, writer.toString());
+                invalidateCache(record.getJobName());
 
                 LOGGER.log(Level.FINE, "Updated build parameter record for {0} #{1}",
                         new Object[]{record.getJobName(), record.getBuildId()});
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Failed to update build parameter record for " + record.getJobName(), e);
             }
+        }
+    }
+
+    private void writeWithFileLock(File file, String content) throws IOException {
+        try (FileOutputStream fos = new FileOutputStream(file);
+             FileChannel channel = fos.getChannel();
+             FileLock lock = channel.lock();
+             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos, StandardCharsets.UTF_8))) {
+            bw.write(content);
+            bw.flush();
         }
     }
 
@@ -165,16 +225,36 @@ public class BuildParameterHistoryService {
         return sb.toString();
     }
 
+    private void invalidateCache(String jobName) {
+        synchronized (recordsCache) {
+            recordsCache.remove(jobName);
+        }
+    }
+
+    private void invalidateAllCache() {
+        synchronized (recordsCache) {
+            recordsCache.clear();
+        }
+    }
+
     public List<BuildParameterRecord> getRecordsForJob(String jobName) {
+        File historyFile = getHistoryFile(jobName);
+        if (historyFile == null || !historyFile.exists()) {
+            return new ArrayList<>();
+        }
+
+        synchronized (recordsCache) {
+            CachedRecords cached = recordsCache.get(jobName);
+            if (cached != null && !cached.isExpired() && !cached.isFileChanged(historyFile)) {
+                return new ArrayList<>(cached.records);
+            }
+        }
+
         List<BuildParameterRecord> records = new ArrayList<>();
 
         synchronized (fileLock) {
-            File historyFile = getHistoryFile(jobName);
-            if (historyFile == null || !historyFile.exists()) {
-                return records;
-            }
-
-            try (BufferedReader reader = new BufferedReader(new FileReader(historyFile))) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     BuildParameterRecord record = parseRecord(line, jobName);
@@ -188,7 +268,12 @@ public class BuildParameterHistoryService {
         }
 
         records.sort(Comparator.comparingLong(BuildParameterRecord::getStartTime).reversed());
-        return records;
+
+        synchronized (recordsCache) {
+            recordsCache.put(jobName, new CachedRecords(records, historyFile.lastModified()));
+        }
+
+        return new ArrayList<>(records);
     }
 
     private BuildParameterRecord parseRecord(String line, String jobName) {
@@ -247,7 +332,8 @@ public class BuildParameterHistoryService {
                     continue;
                 }
 
-                try (BufferedReader reader = new BufferedReader(new FileReader(historyFile))) {
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         BuildParameterRecord record = parseRecord(line, job.getFullName());
@@ -389,21 +475,22 @@ public class BuildParameterHistoryService {
             }
 
             try {
-                BufferedReader reader = new BufferedReader(new FileReader(historyFile));
                 StringWriter writer = new StringWriter();
-                String line;
 
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split("\\|", 3);
-                    if (parts.length < 2 || !parts[1].equals(buildId)) {
-                        writer.write(line + "\n");
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        String[] parts = line.split("\\|", 3);
+                        if (parts.length < 2 || !parts[1].equals(buildId)) {
+                            writer.write(line);
+                            writer.write("\n");
+                        }
                     }
                 }
-                reader.close();
 
-                BufferedWriter bw = new BufferedWriter(new FileWriter(historyFile));
-                bw.write(writer.toString());
-                bw.close();
+                writeWithFileLock(historyFile, writer.toString());
+                invalidateCache(jobName);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Failed to delete record for " + jobName + " #" + buildId, e);
             }
@@ -416,6 +503,45 @@ public class BuildParameterHistoryService {
             if (historyFile != null && historyFile.exists()) {
                 historyFile.delete();
             }
+            invalidateCache(jobName);
+        }
+    }
+
+    public void deleteRecords(String jobName, List<String> buildIds) {
+        if (buildIds == null || buildIds.isEmpty()) {
+            return;
+        }
+
+        synchronized (fileLock) {
+            File historyFile = getHistoryFile(jobName);
+            if (historyFile == null || !historyFile.exists()) {
+                return;
+            }
+
+            try {
+                java.util.Set<String> idSet = new java.util.HashSet<>(buildIds);
+                StringWriter writer = new StringWriter();
+
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        String[] parts = line.split("\\|", 3);
+                        if (parts.length < 2 || !idSet.contains(parts[1])) {
+                            writer.write(line);
+                            writer.write("\n");
+                        }
+                    }
+                }
+
+                writeWithFileLock(historyFile, writer.toString());
+                invalidateCache(jobName);
+
+                LOGGER.log(Level.FINE, "Deleted {0} records for job {1}",
+                        new Object[]{buildIds.size(), jobName});
+            } catch (IOException e) {
+                LOGGER.log(Level.WARNING, "Failed to delete records for " + jobName, e);
+            }
         }
     }
 
@@ -426,7 +552,8 @@ public class BuildParameterHistoryService {
 
         try {
             List<String> allLines = new ArrayList<>();
-            try (BufferedReader reader = new BufferedReader(new FileReader(historyFile))) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     if (!line.trim().isEmpty()) {
@@ -435,22 +562,23 @@ public class BuildParameterHistoryService {
                 }
             }
 
-            if (allLines.size() <= MAX_RECORDS) {
+            int maxRecords = getMaxRecords();
+            if (allLines.size() <= maxRecords) {
                 return;
             }
 
-            // Keep only the latest MAX_RECORDS (newest records are at the beginning)
-            List<String> trimmedLines = allLines.subList(0, MAX_RECORDS);
+            List<String> trimmedLines = allLines.subList(0, maxRecords);
 
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(historyFile))) {
-                for (String line : trimmedLines) {
-                    writer.write(line);
-                    writer.newLine();
-                }
+            StringWriter writer = new StringWriter();
+            for (String line : trimmedLines) {
+                writer.write(line);
+                writer.write("\n");
             }
 
+            writeWithFileLock(historyFile, writer.toString());
+
             LOGGER.log(Level.FINE, "Trimmed {0} old records from history file, kept latest {1}",
-                    new Object[]{allLines.size() - MAX_RECORDS, MAX_RECORDS});
+                    new Object[]{allLines.size() - maxRecords, maxRecords});
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to trim old records from history file", e);
         }
