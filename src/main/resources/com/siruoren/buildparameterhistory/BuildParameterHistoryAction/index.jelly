@@ -1,0 +1,609 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
+
+<l:layout title="${%Page.Title(it.jobName)}">
+    <st:include it="${it.job}" page="sidepanel.jelly"/>
+    <l:main-panel>
+        <style type="text/css">
+            .bph-container {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+            .bph-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #4b758b;
+                flex-wrap: wrap;
+            }
+            .bph-header h1 {
+                margin: 0;
+                font-size: 24px;
+                color: #333;
+            }
+            .bph-filters {
+                background: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+            .bph-filters-title {
+                font-weight: bold;
+                margin-bottom: 10px;
+                color: #495057;
+                font-size: 14px;
+            }
+            .bph-filter-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 10px;
+                align-items: flex-end;
+            }
+            .bph-filter-item {
+                display: flex;
+                flex-direction: column;
+                min-width: 150px;
+                flex: 1 1 150px;
+            }
+            .bph-filter-item label {
+                font-size: 12px;
+                color: #6c757d;
+                margin-bottom: 4px;
+                font-weight: 500;
+            }
+            .bph-filter-item input,
+            .bph-filter-item select {
+                padding: 6px 10px;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                font-size: 13px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .bph-filter-item input:focus,
+            .bph-filter-item select:focus {
+                border-color: #80bdff;
+                outline: none;
+                box-shadow: 0 0 0 2px rgba(128,189,255,0.25);
+            }
+            .bph-btn {
+                padding: 6px 16px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 500;
+                transition: background-color 0.2s;
+                display: inline-block;
+                text-decoration: none;
+                line-height: 20px;
+            }
+            .bph-btn-primary {
+                background-color: #4b758b;
+                color: white;
+            }
+            .bph-btn-primary:hover {
+                background-color: #3a5d70;
+            }
+            .bph-btn-danger {
+                background-color: #dc3545;
+                color: white;
+            }
+            .bph-btn-danger:hover {
+                background-color: #c82333;
+            }
+            .bph-btn-danger:disabled {
+                background-color: #e4606d;
+                opacity: 0.65;
+                cursor: not-allowed;
+            }
+            .bph-btn-secondary {
+                background-color: #6c757d;
+                color: white;
+            }
+            .bph-btn-secondary:hover {
+                background-color: #5a6268;
+            }
+            .bph-btn-page {
+                background-color: #e9ecef;
+                color: #495057;
+                min-width: 32px;
+                text-align: center;
+                padding: 4px 8px;
+            }
+            .bph-btn-page:hover {
+                background-color: #dee2e6;
+            }
+            .bph-table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .bph-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+                min-width: 800px;
+            }
+            .bph-table th {
+                background-color: #4b758b;
+                color: white;
+                padding: 10px 12px;
+                text-align: left;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+            .bph-table td {
+                padding: 8px 12px;
+                border-bottom: 1px solid #dee2e6;
+                vertical-align: top;
+                word-break: break-word;
+            }
+            .bph-table tr:hover td {
+                background-color: #f1f3f5;
+            }
+            .bph-table tr:nth-child(even) td {
+                background-color: #f8f9fa;
+            }
+            .bph-table tr:nth-child(even):hover td {
+                background-color: #f1f3f5;
+            }
+            .bph-table tr.bph-selected td {
+                background-color: #fff3cd !important;
+            }
+            .bph-result {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 3px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .bph-result-SUCCESS { background-color: #d4edda; color: #155724; }
+            .bph-result-FAILURE { background-color: #f8d7da; color: #721c24; }
+            .bph-result-UNSTABLE { background-color: #fff3cd; color: #856404; }
+            .bph-result-ABORTED { background-color: #e2e3e5; color: #383d41; }
+            .bph-result-NOT_BUILT { background-color: #e2e3e5; color: #383d41; }
+            .bph-result-default { background-color: #cce5ff; color: #004085; }
+            .bph-build-link {
+                color: #4b758b;
+                text-decoration: none;
+                font-weight: 600;
+            }
+            .bph-build-link:hover {
+                text-decoration: underline;
+            }
+            .bph-params {
+                max-width: 400px;
+            }
+            .bph-param-item {
+                padding: 3px 0;
+                border-bottom: 1px dotted #dee2e6;
+            }
+            .bph-param-item:last-child {
+                border-bottom: none;
+            }
+            .bph-param-name {
+                font-weight: 600;
+                color: #495057;
+            }
+            .bph-param-value {
+                color: #212529;
+                word-break: break-all;
+            }
+            .bph-empty {
+                text-align: center;
+                padding: 40px;
+                color: #6c757d;
+                font-size: 16px;
+            }
+            .bph-actions {
+                display: flex;
+                gap: 8px;
+                margin-top: 10px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            .bph-stats {
+                font-size: 12px;
+                color: #6c757d;
+                margin-bottom: 10px;
+            }
+            .bph-param-index {
+                display: inline-block;
+                background-color: #e9ecef;
+                color: #495057;
+                border-radius: 3px;
+                padding: 0 5px;
+                font-size: 11px;
+                font-weight: 600;
+                margin-right: 4px;
+            }
+            .bph-pagination {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 4px;
+                margin: 15px 0;
+                flex-wrap: wrap;
+            }
+            .bph-pagination-info {
+                font-size: 12px;
+                color: #6c757d;
+                margin: 0 10px;
+            }
+            .bph-select-bar {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                background: #fff3cd;
+                border: 1px solid #ffc107;
+                border-radius: 4px;
+                margin-bottom: 10px;
+                font-size: 13px;
+            }
+            .bph-select-bar .bph-selected-count {
+                font-weight: 600;
+                color: #856404;
+            }
+            .bph-checkbox {
+                width: 16px;
+                height: 16px;
+                cursor: pointer;
+                accent-color: #4b758b;
+            }
+            @media screen and (max-width: 768px) {
+                .bph-filter-item {
+                    min-width: 120px;
+                    flex: 1 1 120px;
+                }
+                .bph-table {
+                    font-size: 12px;
+                }
+                .bph-table th, .bph-table td {
+                    padding: 6px 8px;
+                }
+                .bph-params {
+                    max-width: 250px;
+                }
+            }
+        </style>
+
+        <j:set var="resultFilter" value="${request.getAttribute('bph.resultFilter')}"/>
+        <j:set var="searchKeyword" value="${request.getAttribute('bph.searchKeyword')}"/>
+        <j:set var="parameterName" value="${request.getAttribute('bph.parameterName')}"/>
+        <j:set var="parameterValue" value="${request.getAttribute('bph.parameterValue')}"/>
+        <j:set var="pageRecords" value="${request.getAttribute('bph.pageRecords')}"/>
+        <j:set var="currentPage" value="${request.getAttribute('bph.currentPage')}"/>
+        <j:set var="totalPages" value="${request.getAttribute('bph.totalPages')}"/>
+        <j:set var="totalRecords" value="${request.getAttribute('bph.totalRecords')}"/>
+        <j:set var="hasFilter" value="${request.getAttribute('bph.hasFilter')}"/>
+        <j:set var="hasDeletePermission" value="${request.getAttribute('bph.hasDeletePermission')}"/>
+
+        <div class="bph-container">
+            <div class="bph-header">
+                <h1>${%BuildParameterHistoryAction.DisplayName}</h1>
+            </div>
+
+            <div class="bph-filters">
+                <div class="bph-filters-title">${%Filter.Records}</div>
+                <form method="post" action="filterResults">
+                    <div class="bph-filter-row">
+                        <div class="bph-filter-item">
+                            <label>${%Filter.Build.Result}</label>
+                            <select name="resultFilter">
+                                <j:choose>
+                                    <j:when test="${empty resultFilter or resultFilter == '' or resultFilter == 'ALL'}">
+                                        <option value="ALL" selected="selected">${%Filter.All}</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="ALL">${%Filter.All}</option>
+                                    </j:otherwise>
+                                </j:choose>
+                                <j:choose>
+                                    <j:when test="${resultFilter == 'SUCCESS'}">
+                                        <option value="SUCCESS" selected="selected">${%Result.Success}</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="SUCCESS">${%Result.Success}</option>
+                                    </j:otherwise>
+                                </j:choose>
+                                <j:choose>
+                                    <j:when test="${resultFilter == 'FAILURE'}">
+                                        <option value="FAILURE" selected="selected">${%Result.Failure}</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="FAILURE">${%Result.Failure}</option>
+                                    </j:otherwise>
+                                </j:choose>
+                                <j:choose>
+                                    <j:when test="${resultFilter == 'UNSTABLE'}">
+                                        <option value="UNSTABLE" selected="selected">${%Result.Unstable}</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="UNSTABLE">${%Result.Unstable}</option>
+                                    </j:otherwise>
+                                </j:choose>
+                                <j:choose>
+                                    <j:when test="${resultFilter == 'ABORTED'}">
+                                        <option value="ABORTED" selected="selected">${%Result.Aborted}</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="ABORTED">${%Result.Aborted}</option>
+                                    </j:otherwise>
+                                </j:choose>
+                                <j:choose>
+                                    <j:when test="${resultFilter == 'NOT_BUILT'}">
+                                        <option value="NOT_BUILT" selected="selected">${%Result.NotBuilt}</option>
+                                    </j:when>
+                                    <j:otherwise>
+                                        <option value="NOT_BUILT">${%Result.NotBuilt}</option>
+                                    </j:otherwise>
+                                </j:choose>
+                            </select>
+                        </div>
+                        <div class="bph-filter-item">
+                            <label>${%Filter.Parameter.Name}</label>
+                            <input type="text" name="parameterName" value="${parameterName}" placeholder="${%Filter.Parameter.Name.Placeholder}"/>
+                        </div>
+                        <div class="bph-filter-item">
+                            <label>${%Filter.Parameter.Value}</label>
+                            <input type="text" name="parameterValue" value="${parameterValue}" placeholder="${%Filter.Parameter.Value.Placeholder}"/>
+                        </div>
+                    </div>
+                    <div class="bph-filter-row">
+                        <div class="bph-filter-item" style="flex: 2 1 300px;">
+                            <label>${%Filter.Global.Search}</label>
+                            <input type="text" name="searchKeyword" value="${searchKeyword}" placeholder="${%Filter.Global.Search.Placeholder}" style="width: 100%;"/>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-self: flex-end;">
+                            <button type="submit" class="bph-btn bph-btn-primary">${%Filter.Button}</button>
+                            <a href="." class="bph-btn bph-btn-secondary">${%Filter.Reset}</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bph-stats">
+                <j:choose>
+                    <j:when test="${totalRecords == 0}">
+                        ${%Filter.No.Records}
+                    </j:when>
+                    <j:otherwise>
+                        <j:choose>
+                            <j:when test="${hasFilter}">
+                                ${%Filter.Filtered.Page(totalRecords, currentPage, totalPages)}
+                            </j:when>
+                            <j:otherwise>
+                                ${%Filter.Total.Page(totalRecords, currentPage, totalPages)}
+                            </j:otherwise>
+                        </j:choose>
+                    </j:otherwise>
+                </j:choose>
+            </div>
+
+            <j:if test="${hasDeletePermission and totalRecords > 0}">
+                <div id="bphSelectBar" class="bph-select-bar" style="display:none;">
+                    <span class="bph-selected-count" id="bphSelectedCount">0</span>
+                    <span>${%Selection.Items.Selected(0)}</span>
+                    <form method="post" action="deleteRecords" style="display:inline;" id="bphDeleteForm">
+                        <input type="hidden" name="buildIdsStr" id="bphDeleteIdsInput" value=""/>
+                        <button type="submit" class="bph-btn bph-btn-danger" id="bphDeleteBtn" onclick="return confirm('${%Selection.Confirm.Delete}')">${%Selection.Delete}</button>
+                    </form>
+                    <button type="button" class="bph-btn bph-btn-secondary" onclick="bphClearSelection()">${%Selection.Cancel}</button>
+                </div>
+            </j:if>
+
+            <div class="bph-table-container">
+                <j:choose>
+                    <j:when test="${totalRecords == 0}">
+                        <div class="bph-empty">
+                            ${%Filter.No.Records.Hint}
+                        </div>
+                    </j:when>
+                    <j:otherwise>
+                        <table class="bph-table">
+                            <thead>
+                                <tr>
+                                    <j:if test="${hasDeletePermission}">
+                                        <th style="width:40px;text-align:center;">
+                                            <input type="checkbox" class="bph-checkbox" id="bphSelectAll" title="${%Selection.Select.All}" onclick="bphToggleSelectAll(this)"/>
+                                        </th>
+                                    </j:if>
+                                    <th>${%Table.Header.Job.Name}</th>
+                                    <th>${%Table.Header.Build.ID}</th>
+                                    <th>${%Table.Header.Start.Time}</th>
+                                    <th>${%Table.Header.End.Time}</th>
+                                    <th>${%Table.Header.Duration}</th>
+                                    <th>${%Table.Header.Result}</th>
+                                    <th>${%Table.Header.Parameters}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <j:forEach var="record" items="${pageRecords}">
+                                    <tr data-build-id="${record.buildId}" class="bph-row">
+                                        <j:if test="${hasDeletePermission}">
+                                            <td style="text-align:center;">
+                                                <input type="checkbox" class="bph-checkbox bph-row-checkbox" value="${record.buildId}" onclick="bphToggleRow(this)"/>
+                                            </td>
+                                        </j:if>
+                                        <td>${record.jobName}</td>
+                                        <td>
+                                            <a href="${rootURL}/${record.safeBuildUrl}" class="bph-build-link" target="_blank" rel="noopener noreferrer">
+                                                #${record.buildId}
+                                            </a>
+                                        </td>
+                                        <td>${record.formattedStartTime}</td>
+                                        <td>${record.formattedEndTime}</td>
+                                        <td>${record.duration}</td>
+                                        <td>
+                                            <j:choose>
+                                                <j:when test="${record.result == 'SUCCESS'}">
+                                                    <span class="bph-result bph-result-SUCCESS">${%Result.Success}</span>
+                                                </j:when>
+                                                <j:when test="${record.result == 'FAILURE'}">
+                                                    <span class="bph-result bph-result-FAILURE">${%Result.Failure}</span>
+                                                </j:when>
+                                                <j:when test="${record.result == 'UNSTABLE'}">
+                                                    <span class="bph-result bph-result-UNSTABLE">${%Result.Unstable}</span>
+                                                </j:when>
+                                                <j:when test="${record.result == 'ABORTED'}">
+                                                    <span class="bph-result bph-result-ABORTED">${%Result.Aborted}</span>
+                                                </j:when>
+                                                <j:when test="${record.result == 'NOT_BUILT'}">
+                                                    <span class="bph-result bph-result-NOT_BUILT">${%Result.NotBuilt}</span>
+                                                </j:when>
+                                                <j:otherwise>
+                                                    <span class="bph-result bph-result-default">${record.result}</span>
+                                                </j:otherwise>
+                                            </j:choose>
+                                        </td>
+                                        <td class="bph-params">
+                                            <j:choose>
+                                                <j:when test="${empty record.parameters}">
+                                                    <span style="color: #6c757d;">${%Table.No.Parameters}</span>
+                                                </j:when>
+                                                <j:otherwise>
+                                                    <j:forEach var="param" items="${record.parameters}" varStatus="paramStatus">
+                                                        <div class="bph-param-item">
+                                                            <span class="bph-param-index">${%Table.Param.Index(paramStatus.index + 1)}</span>
+                                                            <span class="bph-param-name">${param.name}：</span>
+                                                            <span class="bph-param-value">${param.value}</span>
+                                                        </div>
+                                                    </j:forEach>
+                                                </j:otherwise>
+                                            </j:choose>
+                                        </td>
+                                    </tr>
+                                </j:forEach>
+                            </tbody>
+                        </table>
+                    </j:otherwise>
+                </j:choose>
+            </div>
+
+            <j:if test="${totalPages > 1}">
+                <div class="bph-pagination">
+                    <j:choose>
+                        <j:when test="${currentPage > 1}">
+                            <a href="${it.buildPageUrl(1, resultFilter, searchKeyword, parameterName, parameterValue)}" class="bph-btn bph-btn-page">${%Pagination.First}</a>
+                            <a href="${it.buildPageUrl(currentPage - 1, resultFilter, searchKeyword, parameterName, parameterValue)}" class="bph-btn bph-btn-page">${%Pagination.Prev}</a>
+                        </j:when>
+                        <j:otherwise>
+                            <span class="bph-btn bph-btn-page" style="opacity:0.5;cursor:default;">${%Pagination.First}</span>
+                            <span class="bph-btn bph-btn-page" style="opacity:0.5;cursor:default;">${%Pagination.Prev}</span>
+                        </j:otherwise>
+                    </j:choose>
+
+                    <span class="bph-pagination-info">
+                        ${%Pagination.Page(currentPage, totalPages)}
+                    </span>
+
+                    <j:choose>
+                        <j:when test="${currentPage &lt; totalPages}">
+                            <a href="${it.buildPageUrl(currentPage + 1, resultFilter, searchKeyword, parameterName, parameterValue)}" class="bph-btn bph-btn-page">${%Pagination.Next}</a>
+                            <a href="${it.buildPageUrl(totalPages, resultFilter, searchKeyword, parameterName, parameterValue)}" class="bph-btn bph-btn-page">${%Pagination.Last}</a>
+                        </j:when>
+                        <j:otherwise>
+                            <span class="bph-btn bph-btn-page" style="opacity:0.5;cursor:default;">${%Pagination.Next}</span>
+                            <span class="bph-btn bph-btn-page" style="opacity:0.5;cursor:default;">${%Pagination.Last}</span>
+                        </j:otherwise>
+                    </j:choose>
+                </div>
+            </j:if>
+
+            <div class="bph-actions">
+                <a href="downloadHistory" class="bph-btn bph-btn-primary" style="text-decoration: none;">
+                    ${%Actions.Download}
+                </a>
+                <j:if test="${hasDeletePermission}">
+                    <form method="post" action="clearHistory" style="display:inline;" onsubmit="return confirm('${%Actions.Confirm.Clear}')">
+                        <button type="submit" class="bph-btn bph-btn-danger">${%Actions.Clear.All}</button>
+                    </form>
+                </j:if>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            function bphToggleSelectAll(checkbox) {
+                var checkboxes = document.querySelectorAll('.bph-row-checkbox');
+                for (var i = 0; i &lt; checkboxes.length; i++) {
+                    checkboxes[i].checked = checkbox.checked;
+                    bphUpdateRowStyle(checkboxes[i]);
+                }
+                bphUpdateSelectBar();
+            }
+
+            function bphToggleRow(checkbox) {
+                bphUpdateRowStyle(checkbox);
+                bphUpdateSelectAll();
+                bphUpdateSelectBar();
+            }
+
+            function bphUpdateRowStyle(checkbox) {
+                var row = checkbox.closest('tr');
+                if (row) {
+                    if (checkbox.checked) {
+                        row.classList.add('bph-selected');
+                    } else {
+                        row.classList.remove('bph-selected');
+                    }
+                }
+            }
+
+            function bphUpdateSelectAll() {
+                var selectAll = document.getElementById('bphSelectAll');
+                if (!selectAll) return;
+                var checkboxes = document.querySelectorAll('.bph-row-checkbox');
+                var checked = document.querySelectorAll('.bph-row-checkbox:checked');
+                selectAll.checked = checkboxes.length > 0 &amp;&amp; checkboxes.length === checked.length;
+                selectAll.indeterminate = checked.length > 0 &amp;&amp; checked.length &lt; checkboxes.length;
+            }
+
+            function bphUpdateSelectBar() {
+                var bar = document.getElementById('bphSelectBar');
+                var countEl = document.getElementById('bphSelectedCount');
+                var idsInput = document.getElementById('bphDeleteIdsInput');
+                var deleteBtn = document.getElementById('bphDeleteBtn');
+                if (!bar) return;
+
+                var checked = document.querySelectorAll('.bph-row-checkbox:checked');
+                var ids = [];
+                for (var i = 0; i &lt; checked.length; i++) {
+                    ids.push(checked[i].value);
+                }
+
+                countEl.textContent = ids.length;
+                idsInput.value = ids.join(',');
+
+                if (ids.length > 0) {
+                    bar.style.display = 'flex';
+                    deleteBtn.disabled = false;
+                } else {
+                    bar.style.display = 'none';
+                    deleteBtn.disabled = true;
+                }
+            }
+
+            function bphClearSelection() {
+                var checkboxes = document.querySelectorAll('.bph-row-checkbox');
+                for (var i = 0; i &lt; checkboxes.length; i++) {
+                    checkboxes[i].checked = false;
+                    bphUpdateRowStyle(checkboxes[i]);
+                }
+                var selectAll = document.getElementById('bphSelectAll');
+                if (selectAll) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                }
+                bphUpdateSelectBar();
+            }
+        </script>
+    </l:main-panel>
+</l:layout>
+</j:jelly>
