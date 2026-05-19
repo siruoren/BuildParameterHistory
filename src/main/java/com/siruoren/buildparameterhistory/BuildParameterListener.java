@@ -6,6 +6,7 @@ import hudson.model.ParametersAction;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -19,80 +20,118 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
 
     @Override
     public void onStarted(Run<?, ?> run, TaskListener listener) {
+        String jobName;
+        String buildId;
+        String buildUrl;
+        long startTime;
+        List<BuildParameterRecord.ParameterEntry> parameters;
+        File historyFile;
+
+        try {
+            jobName = run.getParent().getFullName();
+            buildId = String.valueOf(run.getNumber());
+            buildUrl = safeGetBuildUrl(run);
+            startTime = run.getStartTimeInMillis();
+            parameters = extractParameters(run);
+            historyFile = BuildParameterHistoryService.getInstance().resolveHistoryFile(run.getParent());
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to extract build info on start", e);
+            return;
+        }
+
+        final String finalJobName = jobName;
+        final String finalBuildId = buildId;
+        final String finalBuildUrl = buildUrl;
+        final long finalStartTime = startTime;
+        final List<BuildParameterRecord.ParameterEntry> finalParameters = parameters;
+        final File finalHistoryFile = historyFile;
+
         BuildParameterHistoryThreadPool.getInstance().submit(() -> {
             try {
-                recordBuildStart(run);
+                BuildParameterRecord record = new BuildParameterRecord(
+                        finalJobName,
+                        finalBuildId,
+                        finalBuildUrl,
+                        finalStartTime,
+                        0,
+                        null,
+                        finalParameters
+                );
+                BuildParameterHistoryService.getInstance().saveRecord(finalHistoryFile, record);
+                LOGGER.log(Level.INFO, "Recorded build start: {0} #{1}",
+                        new Object[]{finalJobName, finalBuildId});
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Failed to record build start for " + run.getFullDisplayName(), e);
+                LOGGER.log(Level.WARNING, "Failed to record build start: {0} #{1}",
+                        new Object[]{finalJobName, finalBuildId, e});
             }
         });
     }
 
     @Override
     public void onCompleted(Run<?, ?> run, @Nonnull TaskListener listener) {
-        BuildParameterHistoryThreadPool.getInstance().submit(() -> {
-            try {
-                recordBuildCompletion(run);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Failed to record build completion for " + run.getFullDisplayName(), e);
-            }
-        });
-    }
-
-    private void recordBuildStart(Run<?, ?> run) {
-        BuildParameterHistoryService service = BuildParameterHistoryService.getInstance();
-
-        String jobName = run.getParent().getFullName();
-        String buildId = String.valueOf(run.getNumber());
-        String buildUrl = safeGetBuildUrl(run);
-
-        List<BuildParameterRecord.ParameterEntry> parameters = extractParameters(run);
-
-        BuildParameterRecord record = new BuildParameterRecord(
-                jobName,
-                buildId,
-                buildUrl,
-                run.getStartTimeInMillis(),
-                0,
-                null,
-                parameters
-        );
-
-        service.saveRecord(record);
-        LOGGER.log(Level.FINE, "Recorded build start: {0} #{1}", new Object[]{jobName, buildId});
-    }
-
-    private void recordBuildCompletion(Run<?, ?> run) {
-        BuildParameterHistoryService service = BuildParameterHistoryService.getInstance();
-
-        String jobName = run.getParent().getFullName();
-        String buildId = String.valueOf(run.getNumber());
-
-        BuildParameterRecord existingRecord = findExistingRecord(service, jobName, buildId);
-
+        String jobName;
+        String buildId;
+        String buildUrl;
+        long startTime;
+        String result;
         List<BuildParameterRecord.ParameterEntry> parameters;
-        if (existingRecord != null && existingRecord.getParameters() != null && !existingRecord.getParameters().isEmpty()) {
-            parameters = existingRecord.getParameters();
-        } else {
+        File historyFile;
+
+        try {
+            jobName = run.getParent().getFullName();
+            buildId = String.valueOf(run.getNumber());
+            buildUrl = safeGetBuildUrl(run);
+            startTime = run.getStartTimeInMillis();
+            result = run.getResult() != null ? run.getResult().toString() : "UNKNOWN";
             parameters = extractParameters(run);
+            historyFile = BuildParameterHistoryService.getInstance().resolveHistoryFile(run.getParent());
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to extract build info on completion", e);
+            return;
         }
 
-        String result = run.getResult() != null ? run.getResult().toString() : "UNKNOWN";
-        String buildUrl = safeGetBuildUrl(run);
+        final String finalJobName = jobName;
+        final String finalBuildId = buildId;
+        final String finalBuildUrl = buildUrl;
+        final long finalStartTime = startTime;
+        final String finalResult = result;
+        final List<BuildParameterRecord.ParameterEntry> finalParameters = parameters;
+        final File finalHistoryFile = historyFile;
 
-        BuildParameterRecord record = new BuildParameterRecord(
-                jobName,
-                buildId,
-                buildUrl,
-                run.getStartTimeInMillis(),
-                System.currentTimeMillis(),
-                result,
-                parameters
-        );
+        BuildParameterHistoryThreadPool.getInstance().submit(() -> {
+            try {
+                BuildParameterHistoryService service = BuildParameterHistoryService.getInstance();
+                List<BuildParameterRecord> existingRecords = service.getRecordsForJob(finalJobName);
 
-        service.updateRecord(record);
-        LOGGER.log(Level.FINE, "Recorded build completion: {0} #{1} -> {2}",
-                new Object[]{jobName, buildId, result});
+                List<BuildParameterRecord.ParameterEntry> paramsToUse = finalParameters;
+                if (existingRecords != null && !existingRecords.isEmpty()) {
+                    for (BuildParameterRecord existing : existingRecords) {
+                        if (finalBuildId.equals(existing.getBuildId())
+                                && existing.getParameters() != null
+                                && !existing.getParameters().isEmpty()) {
+                            paramsToUse = existing.getParameters();
+                            break;
+                        }
+                    }
+                }
+
+                BuildParameterRecord record = new BuildParameterRecord(
+                        finalJobName,
+                        finalBuildId,
+                        finalBuildUrl,
+                        finalStartTime,
+                        System.currentTimeMillis(),
+                        finalResult,
+                        paramsToUse
+                );
+                service.updateRecord(finalHistoryFile, record);
+                LOGGER.log(Level.INFO, "Recorded build completion: {0} #{1} -> {2}",
+                        new Object[]{finalJobName, finalBuildId, finalResult});
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Failed to record build completion: {0} #{1}",
+                        new Object[]{finalJobName, finalBuildId, e});
+            }
+        });
     }
 
     private String safeGetBuildUrl(Run<?, ?> run) {
@@ -102,20 +141,13 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
                 return url;
             }
         } catch (Exception e) {
-            LOGGER.log(Level.FINE, "Failed to get build URL for " + run.getFullDisplayName(), e);
+            LOGGER.log(Level.FINE, "Failed to get build URL", e);
         }
-        return run.getParent().getUrl() + run.getNumber() + "/";
-    }
-
-    private BuildParameterRecord findExistingRecord(BuildParameterHistoryService service,
-                                                     String jobName, String buildId) {
-        List<BuildParameterRecord> records = service.getRecordsForJob(jobName);
-        for (BuildParameterRecord record : records) {
-            if (buildId.equals(record.getBuildId())) {
-                return record;
-            }
+        try {
+            return run.getParent().getUrl() + run.getNumber() + "/";
+        } catch (Exception e) {
+            return "";
         }
-        return null;
     }
 
     private List<BuildParameterRecord.ParameterEntry> extractParameters(Run<?, ?> run) {

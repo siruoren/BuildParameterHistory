@@ -91,6 +91,10 @@ public class BuildParameterHistoryService {
             LOGGER.log(Level.WARNING, "Job not found: " + jobName);
             return null;
         }
+        return resolveHistoryFile(job);
+    }
+
+    public File resolveHistoryFile(Job<?, ?> job) {
         File jobDir = job.getRootDir();
         if (!jobDir.exists()) {
             jobDir.mkdirs();
@@ -104,37 +108,46 @@ public class BuildParameterHistoryService {
             if (historyFile == null) {
                 return;
             }
+            doSaveRecord(historyFile, record);
+        }
+    }
 
-            try {
-                String line = formatRecord(record);
+    public void saveRecord(@NonNull File historyFile, @NonNull BuildParameterRecord record) {
+        synchronized (fileLock) {
+            doSaveRecord(historyFile, record);
+        }
+    }
 
-                if (historyFile.exists()) {
-                    StringWriter writer = new StringWriter();
-                    writer.write(line);
-                    writer.write("\n");
+    private void doSaveRecord(File historyFile, BuildParameterRecord record) {
+        try {
+            String line = formatRecord(record);
 
-                    try (BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
-                        String existingLine;
-                        while ((existingLine = reader.readLine()) != null) {
-                            writer.write(existingLine);
-                            writer.write("\n");
-                        }
+            if (historyFile.exists()) {
+                StringWriter writer = new StringWriter();
+                writer.write(line);
+                writer.write("\n");
+
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
+                    String existingLine;
+                    while ((existingLine = reader.readLine()) != null) {
+                        writer.write(existingLine);
+                        writer.write("\n");
                     }
-
-                    writeWithFileLock(historyFile, writer.toString());
-                } else {
-                    writeWithFileLock(historyFile, line + "\n");
                 }
 
-                trimOldRecords(historyFile);
-                invalidateCache(record.getJobName());
-
-                LOGGER.log(Level.FINE, "Saved build parameter record for {0} #{1}",
-                        new Object[]{record.getJobName(), record.getBuildId()});
-            } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Failed to save build parameter record for " + record.getJobName(), e);
+                writeWithFileLock(historyFile, writer.toString());
+            } else {
+                writeWithFileLock(historyFile, line + "\n");
             }
+
+            trimOldRecords(historyFile);
+            invalidateCache(record.getJobName());
+
+            LOGGER.log(Level.FINE, "Saved build parameter record for {0} #{1}",
+                    new Object[]{record.getJobName(), record.getBuildId()});
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Failed to save build parameter record for " + record.getJobName(), e);
         }
     }
 
@@ -142,51 +155,72 @@ public class BuildParameterHistoryService {
         synchronized (fileLock) {
             File historyFile = getHistoryFile(record.getJobName());
             if (historyFile == null || !historyFile.exists()) {
-                saveRecord(record);
+                doSaveRecord(historyFile != null ? historyFile : getOrCreateHistoryFile(record.getJobName()), record);
                 return;
             }
+            doUpdateRecord(historyFile, record);
+        }
+    }
 
-            try {
-                String buildId = record.getBuildId();
-                String newLine = formatRecord(record);
-                boolean found = false;
+    public void updateRecord(@NonNull File historyFile, @NonNull BuildParameterRecord record) {
+        synchronized (fileLock) {
+            if (!historyFile.exists()) {
+                doSaveRecord(historyFile, record);
+                return;
+            }
+            doUpdateRecord(historyFile, record);
+        }
+    }
 
-                StringWriter writer = new StringWriter();
+    private File getOrCreateHistoryFile(String jobName) {
+        File f = getHistoryFile(jobName);
+        if (f == null) {
+            LOGGER.log(Level.WARNING, "Cannot resolve history file for job: " + jobName);
+        }
+        return f;
+    }
 
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
-                    String existingLine;
-                    while ((existingLine = reader.readLine()) != null) {
-                        String[] parts = existingLine.split("\\|", 3);
-                        if (parts.length >= 2 && parts[1].equals(buildId)) {
-                            if (!found) {
-                                writer.write(newLine);
-                                writer.write("\n");
-                                found = true;
-                            }
-                        } else {
-                            writer.write(existingLine);
+    private void doUpdateRecord(File historyFile, BuildParameterRecord record) {
+        try {
+            String buildId = record.getBuildId();
+            String newLine = formatRecord(record);
+            boolean found = false;
+
+            StringWriter writer = new StringWriter();
+
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(historyFile), StandardCharsets.UTF_8))) {
+                String existingLine;
+                while ((existingLine = reader.readLine()) != null) {
+                    String[] parts = existingLine.split("\\|", 3);
+                    if (parts.length >= 2 && parts[1].equals(buildId)) {
+                        if (!found) {
+                            writer.write(newLine);
                             writer.write("\n");
+                            found = true;
                         }
+                    } else {
+                        writer.write(existingLine);
+                        writer.write("\n");
                     }
                 }
-
-                if (!found) {
-                    StringWriter writer2 = new StringWriter();
-                    writer2.write(newLine);
-                    writer2.write("\n");
-                    writer2.write(writer.toString());
-                    writer = writer2;
-                }
-
-                writeWithFileLock(historyFile, writer.toString());
-                invalidateCache(record.getJobName());
-
-                LOGGER.log(Level.FINE, "Updated build parameter record for {0} #{1}",
-                        new Object[]{record.getJobName(), record.getBuildId()});
-            } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Failed to update build parameter record for " + record.getJobName(), e);
             }
+
+            if (!found) {
+                StringWriter writer2 = new StringWriter();
+                writer2.write(newLine);
+                writer2.write("\n");
+                writer2.write(writer.toString());
+                writer = writer2;
+            }
+
+            writeWithFileLock(historyFile, writer.toString());
+            invalidateCache(record.getJobName());
+
+            LOGGER.log(Level.FINE, "Updated build parameter record for {0} #{1}",
+                    new Object[]{record.getJobName(), record.getBuildId()});
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Failed to update build parameter record for " + record.getJobName(), e);
         }
     }
 
@@ -250,6 +284,109 @@ public class BuildParameterHistoryService {
             }
         }
 
+        List<BuildParameterRecord> records = readAllRecordsFromFile(historyFile, jobName);
+
+        synchronized (recordsCache) {
+            recordsCache.put(jobName, new CachedRecords(records, historyFile.lastModified()));
+        }
+
+        return new ArrayList<>(records);
+    }
+
+    public List<BuildParameterRecord> getRecordsForJob(String jobName, int page, int pageSize) {
+        File historyFile = getHistoryFile(jobName);
+        if (historyFile == null || !historyFile.exists()) {
+            return new ArrayList<>();
+        }
+
+        synchronized (recordsCache) {
+            CachedRecords cached = recordsCache.get(jobName);
+            if (cached != null && !cached.isExpired() && !cached.isFileChanged(historyFile)) {
+                int start = (page - 1) * pageSize;
+                int end = Math.min(start + pageSize, cached.records.size());
+                if (start >= cached.records.size()) {
+                    return new ArrayList<>();
+                }
+                return new ArrayList<>(cached.records.subList(start, end));
+            }
+        }
+
+        List<BuildParameterRecord> records = readAllRecordsFromFile(historyFile, jobName);
+
+        synchronized (recordsCache) {
+            recordsCache.put(jobName, new CachedRecords(records, historyFile.lastModified()));
+        }
+
+        int start = (page - 1) * pageSize;
+        int end = Math.min(start + pageSize, records.size());
+        if (start >= records.size()) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(records.subList(start, end));
+    }
+
+    public int getRecordCountForJob(String jobName) {
+        File historyFile = getHistoryFile(jobName);
+        if (historyFile == null || !historyFile.exists()) {
+            return 0;
+        }
+
+        synchronized (recordsCache) {
+            CachedRecords cached = recordsCache.get(jobName);
+            if (cached != null && !cached.isExpired() && !cached.isFileChanged(historyFile)) {
+                return cached.records.size();
+            }
+        }
+
+        List<BuildParameterRecord> records = readAllRecordsFromFile(historyFile, jobName);
+
+        synchronized (recordsCache) {
+            recordsCache.put(jobName, new CachedRecords(records, historyFile.lastModified()));
+        }
+
+        return records.size();
+    }
+
+    public int getFilteredRecordCount(String jobName, String resultFilter, String searchKeyword, String parameterName, String parameterValue) {
+        List<BuildParameterRecord> records;
+        if (jobName != null && !jobName.trim().isEmpty()) {
+            records = getRecordsForJob(jobName);
+        } else {
+            records = getAllRecords();
+        }
+
+        return (int) records.stream()
+                .filter(r -> filterByResult(r, resultFilter))
+                .filter(r -> filterBySearchKeyword(r, searchKeyword))
+                .filter(r -> filterByParameterName(r, parameterName))
+                .filter(r -> filterByParameterValue(r, parameterValue))
+                .count();
+    }
+
+    public List<BuildParameterRecord> getFilteredRecordsForJob(String jobName, String resultFilter, String searchKeyword, String parameterName, String parameterValue, int page, int pageSize) {
+        List<BuildParameterRecord> records;
+        if (jobName != null && !jobName.trim().isEmpty()) {
+            records = getRecordsForJob(jobName);
+        } else {
+            records = getAllRecords();
+        }
+
+        List<BuildParameterRecord> filtered = records.stream()
+                .filter(r -> filterByResult(r, resultFilter))
+                .filter(r -> filterBySearchKeyword(r, searchKeyword))
+                .filter(r -> filterByParameterName(r, parameterName))
+                .filter(r -> filterByParameterValue(r, parameterValue))
+                .collect(Collectors.toList());
+
+        int start = (page - 1) * pageSize;
+        int end = Math.min(start + pageSize, filtered.size());
+        if (start >= filtered.size()) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(filtered.subList(start, end));
+    }
+
+    private List<BuildParameterRecord> readAllRecordsFromFile(File historyFile, String jobName) {
         List<BuildParameterRecord> records = new ArrayList<>();
 
         synchronized (fileLock) {
@@ -268,12 +405,7 @@ public class BuildParameterHistoryService {
         }
 
         records.sort(Comparator.comparingLong(BuildParameterRecord::getStartTime).reversed());
-
-        synchronized (recordsCache) {
-            recordsCache.put(jobName, new CachedRecords(records, historyFile.lastModified()));
-        }
-
-        return new ArrayList<>(records);
+        return records;
     }
 
     private BuildParameterRecord parseRecord(String line, String jobName) {
