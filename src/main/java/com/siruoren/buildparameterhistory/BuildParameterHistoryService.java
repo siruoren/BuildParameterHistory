@@ -71,18 +71,16 @@ public class BuildParameterHistoryService {
     }
 
     public int getMaxRecords() {
-        String maxStr = System.getProperty("buildParameterHistory.maxRecords");
-        if (maxStr != null) {
-            try {
-                int val = Integer.parseInt(maxStr.trim());
-                if (val > 0) {
-                    return val;
-                }
-            } catch (NumberFormatException e) {
-                LOGGER.log(Level.WARNING, "Invalid system property buildParameterHistory.maxRecords: " + maxStr, e);
-            }
+        BuildParameterHistoryGlobalConfiguration config = BuildParameterHistoryGlobalConfiguration.get();
+        int maxRecords;
+        if (config != null && config.getMaxRecords() > 0) {
+            maxRecords = config.getMaxRecords();
+            LOGGER.log(Level.FINE, "BuildParameterHistoryService getMaxRecords from config={0}", maxRecords);
+        } else {
+            maxRecords = DEFAULT_MAX_RECORDS;
+            LOGGER.log(Level.FINE, "BuildParameterHistoryService getMaxRecords using default={0}", maxRecords);
         }
-        return DEFAULT_MAX_RECORDS;
+        return maxRecords;
     }
 
     public File getHistoryFile(String jobName) {
@@ -225,12 +223,30 @@ public class BuildParameterHistoryService {
     }
 
     private void writeWithFileLock(File file, String content) throws IOException {
-        try (FileOutputStream fos = new FileOutputStream(file);
-             FileChannel channel = fos.getChannel();
-             FileLock lock = channel.lock();
-             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos, StandardCharsets.UTF_8))) {
+        FileOutputStream fos = null;
+        FileChannel channel = null;
+        FileLock lock = null;
+        BufferedWriter bw = null;
+        try {
+            fos = new FileOutputStream(file);
+            channel = fos.getChannel();
+            lock = channel.lock();
+            bw = new BufferedWriter(new OutputStreamWriter(fos, StandardCharsets.UTF_8));
             bw.write(content);
             bw.flush();
+        } finally {
+            if (bw != null) {
+                try { bw.close(); } catch (IOException ignored) {}
+            }
+            if (lock != null) {
+                try { lock.release(); } catch (IOException ignored) {}
+            }
+            if (channel != null) {
+                try { channel.close(); } catch (IOException ignored) {}
+            }
+            if (fos != null) {
+                try { fos.close(); } catch (IOException ignored) {}
+            }
         }
     }
 
@@ -674,6 +690,7 @@ public class BuildParameterHistoryService {
             }
 
             int maxRecords = getMaxRecords();
+            LOGGER.log(Level.INFO, "trimOldRecords: allLines.size={0}, maxRecords={1}", new Object[]{allLines.size(), maxRecords});
             if (allLines.size() <= maxRecords) {
                 return;
             }

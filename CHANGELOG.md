@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.1] - 2026-05-20
+
+### Fixed
+- **Record trimming not working**: Fixed critical bug where records were not being trimmed when exceeding the maximum limit
+  - Root cause: `writeWithFileLock` method had incorrect resource closing order in try-with-resources
+  - When `BufferedWriter` closed, it automatically closed the underlying `FileOutputStream`, causing `FileLock.release()` to fail with `ClosedChannelException`
+  - Solution: Rewrote `writeWithFileLock` to manually manage resource closing in correct order
+  - This fix ensures records are properly saved and old records are automatically removed when limit is exceeded
+- **Global configuration not persisting**: Fixed issue where max records setting in system configuration was not being saved correctly
+  - Root cause: `GlobalConfiguration` requires overriding `configure()` method for proper form data binding
+  - Solution: Added `configure(StaplerRequest req, JSONObject formData)` method to properly handle form submission
+
+### Added
+- **Global configuration for max records**: Added system-wide configuration option in Jenkins System Settings
+  - Created `BuildParameterHistoryGlobalConfiguration` class extending `GlobalConfiguration`
+  - Added config Jelly page at `config.jelly` for UI
+  - Users can now configure the default maximum number of records to keep per job
+  - Configurable range: 1 - 10000 records (default: 200)
+  - Added validation for input values
+  - Updated `BuildParameterHistoryService.getMaxRecords()` to read from global configuration
+  - Added localization for configuration UI elements in both English and Chinese
+
+### Changed
+- Maximum records per job is now configurable via Jenkins system settings instead of hardcoded value
+
 ## [1.0.0] - 2026-05-19
 
 ### Fixed
