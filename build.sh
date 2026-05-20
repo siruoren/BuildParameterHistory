@@ -2,7 +2,7 @@
 
 set -e
 
-source ~/.bashrc
+source ~/.zshrc
 
 PROJECT_NAME="build-parameter-history"
 MVN_OPTS="-Denforcer.skip=true -DskipTests"

@@ -71,16 +71,9 @@ public class BuildParameterHistoryService {
     }
 
     public int getMaxRecords() {
-        String maxStr = System.getProperty("buildParameterHistory.maxRecords");
-        if (maxStr != null) {
-            try {
-                int val = Integer.parseInt(maxStr.trim());
-                if (val > 0) {
-                    return val;
-                }
-            } catch (NumberFormatException e) {
-                LOGGER.log(Level.WARNING, "Invalid system property buildParameterHistory.maxRecords: " + maxStr, e);
-            }
+        BuildParameterHistoryGlobalConfiguration config = BuildParameterHistoryGlobalConfiguration.get();
+        if (config != null && config.getMaxRecords() > 0) {
+            return config.getMaxRecords();
         }
         return DEFAULT_MAX_RECORDS;
     }

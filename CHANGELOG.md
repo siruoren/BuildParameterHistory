@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.1] - 2026-05-20
+
+### Added
+- **Global configuration for max records**: Added system-wide configuration option in Jenkins System Settings
+  - Created `BuildParameterHistoryGlobalConfiguration` class extending `GlobalConfiguration`
+  - Added config Jelly page at `config.jelly` for UI
+  - Users can now configure the default maximum number of records to keep per job
+  - Configurable range: 1 - 10000 records (default: 200)
+  - Added validation for input values
+  - Updated `BuildParameterHistoryService.getMaxRecords()` to read from global configuration
+  - Added localization for configuration UI elements in both English and Chinese
+
+### Changed
+- Maximum records per job is now configurable via Jenkins system settings instead of hardcoded value
+
 ## [1.0.0] - 2026-05-19
 
 ### Fixed
