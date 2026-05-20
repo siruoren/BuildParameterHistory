@@ -1,8 +1,8 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
     <f:section title="${%GlobalConfig.DisplayName}">
-        <f:entry title="${%GlobalConfig.MaxRecords}" description="${%GlobalConfig.MaxRecords.Description}">
-            <f:number name="maxRecords" value="${instance.maxRecords}" min="${instance.minMaxRecords}" max="${instance.maxMaxRecords}" default="${instance.defaultMaxRecords}"/>
+        <f:entry title="${%GlobalConfig.MaxRecords}" description="${%GlobalConfig.MaxRecords.Description}" field="maxRecords">
+            <f:number default="${instance.defaultMaxRecords}" min="${instance.minMaxRecords}" max="${instance.maxMaxRecords}"/>
         </f:entry>
     </f:section>
 </j:jelly>
