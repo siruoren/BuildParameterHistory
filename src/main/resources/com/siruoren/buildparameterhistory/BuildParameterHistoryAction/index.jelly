@@ -389,8 +389,7 @@
 
             <j:if test="${hasDeletePermission and totalRecords > 0}">
                 <div id="bphSelectBar" class="bph-select-bar" style="display:none;">
-                    <span class="bph-selected-count" id="bphSelectedCount">0</span>
-                    <span>${%Selection.Items.Selected(0)}</span>
+                    <span class="bph-selected-count" id="bphSelectedCount">${%Selection.Items.Selected(0)}</span>
                     <form method="post" action="deleteRecords" style="display:inline;" id="bphDeleteForm">
                         <input type="hidden" name="buildIdsStr" id="bphDeleteIdsInput" value=""/>
                         <button type="submit" class="bph-btn bph-btn-danger" id="bphDeleteBtn" onclick="return confirm('${%Selection.Confirm.Delete}')">${%Selection.Delete}</button>
@@ -578,7 +577,7 @@
                     ids.push(checked[i].value);
                 }
 
-                countEl.textContent = ids.length;
+                countEl.textContent = countEl.textContent.replace(/\d+/, ids.length);
                 idsInput.value = ids.join(',');
 
                 if (ids.length > 0) {
