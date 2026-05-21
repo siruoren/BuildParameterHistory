@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.2] - 2026-05-20
+
+### Fixed
+- **选择计数显示异常**：修复在历史页面勾选多个条目时，选择栏始终显示"已选择 0 项"的问题
+  - 根因：选择文本使用了硬编码的参数，无法根据实际选择动态更新
+  - 解决方案：修改 `bphUpdateSelectBar()` JavaScript 函数，使用正则表达式动态更新选择数量
+  - 支持中英文国际化显示
+
 ## [1.0.1] - 2026-05-20
 
 ### Fixed
