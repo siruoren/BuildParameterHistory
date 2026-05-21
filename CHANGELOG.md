@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.3] - 2026-05-21
+
+### Changed
+- **权限调整**：删除记录操作现在需要 Jenkins 管理员权限
+  - 将 `DELETE_RECORDS` 权限的父权限从 `CONFIGURE` 改为 `Jenkins.ADMINISTER`
+  - 只有具有管理员权限的用户才能删除构建参数历史记录
+
 ## [1.0.2] - 2026-05-20
 
 ### Fixed

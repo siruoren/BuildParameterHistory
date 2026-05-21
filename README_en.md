@@ -14,8 +14,8 @@ A Jenkins plugin that records and displays build parameter history for Jenkins j
 - **Global Configuration**: Configure default max records in Jenkins System Settings
 - Supports all standard Jenkins build parameters
 - **Internationalization**: Full support for Chinese and English based on browser language settings
-- **Record selection & batch delete**: Select multiple records and delete them in batch
-- **Clear history**: Option to clear all build parameter history for a job
+- **Record selection & batch delete**: Select multiple records and delete them in batch (requires admin permission)
+- **Clear history**: Option to clear all build parameter history for a job (requires admin permission)
 
 ## Installation
 
@@ -160,7 +160,7 @@ MIT License - see LICENSE file for details
 
 ## Version
 
-1.0.1
+1.0.3
 
 ---
 
