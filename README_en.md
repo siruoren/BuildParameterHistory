@@ -160,7 +160,7 @@ MIT License - see LICENSE file for details
 
 ## Version
 
-1.0.3
+1.0.2
 
 ---
 
