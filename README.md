@@ -168,4 +168,4 @@ MIT License - 详见 LICENSE 文件
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/chart?repos=siruoren/job_import_export%2Csiruoren/BuildParameterHistory&type=date&legend=top-left)](https://www.star-history.com/?repos=siruoren%2Fjob_import_export%2Csiruoren%2FBuildParameterHistory&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/chart?repos=siruoren/BuildParameterHistory&type=date&legend=top-left)](https://www.star-history.com/?repos=siruoren%2FBuildParameterHistory&type=date&legend=top-left)
