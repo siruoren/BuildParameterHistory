@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+
 ## [1.0.2] - 2026-05-20
 
 ### Fixed
@@ -11,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - 根因：选择文本使用了硬编码的参数，无法根据实际选择动态更新
   - 解决方案：修改 `bphUpdateSelectBar()` JavaScript 函数，使用正则表达式动态更新选择数量
   - 支持中英文国际化显示
+### Changed
+- **权限调整**：删除记录操作现在需要 Jenkins 管理员权限
+  - 将 `DELETE_RECORDS` 权限的父权限从 `CONFIGURE` 改为 `Jenkins.ADMINISTER`
+  - 只有具有管理员权限的用户才能删除构建参数历史记录
 
 ## [1.0.1] - 2026-05-20
 

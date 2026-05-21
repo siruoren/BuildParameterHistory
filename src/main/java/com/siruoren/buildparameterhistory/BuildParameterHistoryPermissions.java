@@ -18,7 +18,7 @@ public class BuildParameterHistoryPermissions {
     public static final Permission DELETE_RECORDS =
             new Permission(GROUP, "DeleteRecords",
                     Messages._BuildParameterHistoryPermissions_DeleteRecords_Description(),
-                    CONFIGURE, PermissionScope.JENKINS);
+                    Jenkins.ADMINISTER, PermissionScope.JENKINS);
 
     private BuildParameterHistoryPermissions() {
     }
