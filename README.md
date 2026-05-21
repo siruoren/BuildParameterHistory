@@ -165,3 +165,13 @@ MIT License - 详见 LICENSE 文件
 ---
 
 *[English Version](README_en.md)*
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=siruoren%2Fjob_import_export%2Csiruoren%2FBuildParameterHistory&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=siruoren/job_import_export%2Csiruoren/BuildParameterHistory&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=siruoren/job_import_export%2Csiruoren/BuildParameterHistory&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=siruoren/job_import_export%2Csiruoren/BuildParameterHistory&type=date&legend=top-left" />
+ </picture>
+</a>
