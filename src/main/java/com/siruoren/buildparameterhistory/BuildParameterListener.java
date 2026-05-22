@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
+
 
 @Extension
 public class BuildParameterListener extends RunListener<Run<?, ?>> {
@@ -68,7 +68,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
     }
 
     @Override
-    public void onCompleted(Run<?, ?> run, @Nonnull TaskListener listener) {
+    public void onCompleted(Run<?, ?> run, TaskListener listener) {
         String jobName;
         String buildId;
         String buildUrl;
