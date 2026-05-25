@@ -288,6 +288,16 @@
         <div class="bph-container">
             <div class="bph-header">
                 <h1>${%BuildParameterHistoryAction.DisplayName}</h1>
+                <div style="font-size:12px;color:#6c757d;">
+                    <j:choose>
+                        <j:when test="${it.usingJobMaxRecords}">
+                            ${%JobConfig.MaxRecords.Info(it.effectiveMaxRecords)}
+                        </j:when>
+                        <j:otherwise>
+                            ${%JobConfig.MaxRecords.Global(it.globalMaxRecords)}
+                        </j:otherwise>
+                    </j:choose>
+                </div>
             </div>
 
             <div class="bph-filters">

@@ -83,6 +83,18 @@ public class BuildParameterHistoryService {
         return maxRecords;
     }
 
+    public int getMaxRecords(Job<?, ?> job) {
+        if (job != null) {
+            BuildParameterHistoryJobProperty prop = job.getProperty(BuildParameterHistoryJobProperty.class);
+            if (prop != null && prop.isMaxRecordsSet()) {
+                int jobMaxRecords = prop.getEffectiveMaxRecords();
+                LOGGER.log(Level.FINE, "BuildParameterHistoryService getMaxRecords from job config={0}", jobMaxRecords);
+                return jobMaxRecords;
+            }
+        }
+        return getMaxRecords();
+    }
+
     public File getHistoryFile(String jobName) {
         Job<?, ?> job = Jenkins.get().getItemByFullName(jobName, Job.class);
         if (job == null) {
@@ -106,17 +118,24 @@ public class BuildParameterHistoryService {
             if (historyFile == null) {
                 return;
             }
-            doSaveRecord(historyFile, record);
+            int maxRecords = getMaxRecords();
+            doSaveRecord(historyFile, record, maxRecords);
         }
     }
 
     public void saveRecord(@NonNull File historyFile, @NonNull BuildParameterRecord record) {
         synchronized (fileLock) {
-            doSaveRecord(historyFile, record);
+            doSaveRecord(historyFile, record, getMaxRecords());
         }
     }
 
-    private void doSaveRecord(File historyFile, BuildParameterRecord record) {
+    public void saveRecord(@NonNull File historyFile, @NonNull BuildParameterRecord record, int maxRecords) {
+        synchronized (fileLock) {
+            doSaveRecord(historyFile, record, maxRecords);
+        }
+    }
+
+    private void doSaveRecord(File historyFile, BuildParameterRecord record, int maxRecords) {
         try {
             String line = formatRecord(record);
 
@@ -139,7 +158,7 @@ public class BuildParameterHistoryService {
                 writeWithFileLock(historyFile, line + "\n");
             }
 
-            trimOldRecords(historyFile);
+            trimOldRecords(historyFile, maxRecords);
             invalidateCache(record.getJobName());
 
             LOGGER.log(Level.FINE, "Saved build parameter record for {0} #{1}",
@@ -153,20 +172,30 @@ public class BuildParameterHistoryService {
         synchronized (fileLock) {
             File historyFile = getHistoryFile(record.getJobName());
             if (historyFile == null || !historyFile.exists()) {
-                doSaveRecord(historyFile != null ? historyFile : getOrCreateHistoryFile(record.getJobName()), record);
+                doSaveRecord(historyFile != null ? historyFile : getOrCreateHistoryFile(record.getJobName()), record, getMaxRecords());
                 return;
             }
-            doUpdateRecord(historyFile, record);
+            doUpdateRecord(historyFile, record, getMaxRecords());
         }
     }
 
     public void updateRecord(@NonNull File historyFile, @NonNull BuildParameterRecord record) {
         synchronized (fileLock) {
             if (!historyFile.exists()) {
-                doSaveRecord(historyFile, record);
+                doSaveRecord(historyFile, record, getMaxRecords());
                 return;
             }
-            doUpdateRecord(historyFile, record);
+            doUpdateRecord(historyFile, record, getMaxRecords());
+        }
+    }
+
+    public void updateRecord(@NonNull File historyFile, @NonNull BuildParameterRecord record, int maxRecords) {
+        synchronized (fileLock) {
+            if (!historyFile.exists()) {
+                doSaveRecord(historyFile, record, maxRecords);
+                return;
+            }
+            doUpdateRecord(historyFile, record, maxRecords);
         }
     }
 
@@ -178,7 +207,7 @@ public class BuildParameterHistoryService {
         return f;
     }
 
-    private void doUpdateRecord(File historyFile, BuildParameterRecord record) {
+    private void doUpdateRecord(File historyFile, BuildParameterRecord record, int maxRecords) {
         try {
             String buildId = record.getBuildId();
             String newLine = formatRecord(record);
@@ -213,6 +242,7 @@ public class BuildParameterHistoryService {
             }
 
             writeWithFileLock(historyFile, writer.toString());
+            trimOldRecords(historyFile, maxRecords);
             invalidateCache(record.getJobName());
 
             LOGGER.log(Level.FINE, "Updated build parameter record for {0} #{1}",
@@ -672,7 +702,7 @@ public class BuildParameterHistoryService {
         }
     }
 
-    private void trimOldRecords(File historyFile) {
+    private void trimOldRecords(File historyFile, int maxRecords) {
         if (historyFile == null || !historyFile.exists()) {
             return;
         }
@@ -689,7 +719,6 @@ public class BuildParameterHistoryService {
                 }
             }
 
-            int maxRecords = getMaxRecords();
             LOGGER.log(Level.INFO, "trimOldRecords: allLines.size={0}, maxRecords={1}", new Object[]{allLines.size(), maxRecords});
             if (allLines.size() <= maxRecords) {
                 return;

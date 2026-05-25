@@ -12,6 +12,7 @@ A Jenkins plugin that records and displays build parameter history for Jenkins j
 - Download history file via API or UI button
 - Automatic cleanup: keeps only the latest 200 records per job (configurable)
 - **Global Configuration**: Configure default max records in Jenkins System Settings
+- **Job-level Configuration**: Set per-job max records in job configuration, overriding global settings
 - Supports all standard Jenkins build parameters
 - **Internationalization**: Full support for Chinese and English based on browser language settings
 - **Record selection & batch delete**: Select multiple records and delete them in batch (requires admin permission)
@@ -107,6 +108,19 @@ The plugin supports configuring the default maximum number of records to keep pe
 | Max Records Per Job | Maximum number of build parameter records to keep per job | 200 | 1 - 10000 |
 
 When the record limit is exceeded, the oldest records are automatically removed.
+
+### Job-level Configuration
+
+In addition to global configuration, each job can have its own max records setting:
+
+1. Open the job's configuration page
+2. Find the **Build Parameter History** section
+3. Enter the desired value in the **Max Records** field (leave empty to use global configuration)
+4. Click **Save**
+
+**Priority Rules:**
+- If a job has max records configured (non-empty), the job setting is used
+- If a job has no setting (empty), the global configuration value is used
 
 ### History File
 

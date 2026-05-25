@@ -1,0 +1,9 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:section title="${%JobProperty.DisplayName}">
+        <f:entry title="${%JobProperty.MaxRecords}" description="${%JobProperty.MaxRecords.Description}">
+            <f:number field="maxRecords" min="${descriptor.minMaxRecords}" max="${descriptor.maxMaxRecords}"
+                      placeholder="${%JobProperty.MaxRecords.Placeholder(descriptor.globalMaxRecords)}"/>
+        </f:entry>
+    </f:section>
+</j:jelly>

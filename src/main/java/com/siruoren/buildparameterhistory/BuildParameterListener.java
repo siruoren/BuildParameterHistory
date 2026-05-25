@@ -26,6 +26,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
         long startTime;
         List<BuildParameterRecord.ParameterEntry> parameters;
         File historyFile;
+        int maxRecords;
 
         try {
             jobName = run.getParent().getFullName();
@@ -34,6 +35,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
             startTime = run.getStartTimeInMillis();
             parameters = extractParameters(run);
             historyFile = BuildParameterHistoryService.getInstance().resolveHistoryFile(run.getParent());
+            maxRecords = BuildParameterHistoryService.getInstance().getMaxRecords(run.getParent());
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Failed to extract build info on start", e);
             return;
@@ -45,6 +47,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
         final long finalStartTime = startTime;
         final List<BuildParameterRecord.ParameterEntry> finalParameters = parameters;
         final File finalHistoryFile = historyFile;
+        final int finalMaxRecords = maxRecords;
 
         BuildParameterHistoryThreadPool.getInstance().submit(() -> {
             try {
@@ -57,7 +60,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
                         null,
                         finalParameters
                 );
-                BuildParameterHistoryService.getInstance().saveRecord(finalHistoryFile, record);
+                BuildParameterHistoryService.getInstance().saveRecord(finalHistoryFile, record, finalMaxRecords);
                 LOGGER.log(Level.INFO, "Recorded build start: {0} #{1}",
                         new Object[]{finalJobName, finalBuildId});
             } catch (Exception e) {
@@ -76,6 +79,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
         String result;
         List<BuildParameterRecord.ParameterEntry> parameters;
         File historyFile;
+        int maxRecords;
 
         try {
             jobName = run.getParent().getFullName();
@@ -85,6 +89,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
             result = run.getResult() != null ? run.getResult().toString() : "UNKNOWN";
             parameters = extractParameters(run);
             historyFile = BuildParameterHistoryService.getInstance().resolveHistoryFile(run.getParent());
+            maxRecords = BuildParameterHistoryService.getInstance().getMaxRecords(run.getParent());
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Failed to extract build info on completion", e);
             return;
@@ -97,6 +102,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
         final String finalResult = result;
         final List<BuildParameterRecord.ParameterEntry> finalParameters = parameters;
         final File finalHistoryFile = historyFile;
+        final int finalMaxRecords = maxRecords;
 
         BuildParameterHistoryThreadPool.getInstance().submit(() -> {
             try {
@@ -124,7 +130,7 @@ public class BuildParameterListener extends RunListener<Run<?, ?>> {
                         finalResult,
                         paramsToUse
                 );
-                service.updateRecord(finalHistoryFile, record);
+                service.updateRecord(finalHistoryFile, record, finalMaxRecords);
                 LOGGER.log(Level.INFO, "Recorded build completion: {0} #{1} -> {2}",
                         new Object[]{finalJobName, finalBuildId, finalResult});
             } catch (Exception e) {
