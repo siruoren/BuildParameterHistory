@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
-## [1.0.2-SNAPSHOT] - 2026-05-25
+## [1.0.2] - 2026-05-25
 
 ### Added
 - **Job-level max records configuration**: Added per-job configuration option for maximum records
@@ -23,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `trimOldRecords()` now accepts maxRecords parameter instead of reading from global config
 - Updated `saveRecord()` and `updateRecord()` overloads to accept maxRecords parameter
 
-## [1.0.2] - 2026-05-20
+## [1.0.1] - 2026-05-20
 
 ### Fixed
 - **选择计数显示异常**：修复在历史页面勾选多个条目时，选择栏始终显示"已选择 0 项"的问题
