@@ -53,6 +53,28 @@ public class BuildParameterHistoryAction implements hudson.model.Action {
         return job.getFullName();
     }
 
+    public Integer getJobMaxRecords() {
+        BuildParameterHistoryJobProperty prop = job.getProperty(BuildParameterHistoryJobProperty.class);
+        return prop != null ? prop.getMaxRecords() : null;
+    }
+
+    public int getEffectiveMaxRecords() {
+        BuildParameterHistoryJobProperty prop = job.getProperty(BuildParameterHistoryJobProperty.class);
+        if (prop != null && prop.isMaxRecordsSet()) {
+            return prop.getEffectiveMaxRecords();
+        }
+        return BuildParameterHistoryGlobalConfiguration.get().getMaxRecords();
+    }
+
+    public boolean isUsingJobMaxRecords() {
+        BuildParameterHistoryJobProperty prop = job.getProperty(BuildParameterHistoryJobProperty.class);
+        return prop != null && prop.isMaxRecordsSet();
+    }
+
+    public int getGlobalMaxRecords() {
+        return BuildParameterHistoryGlobalConfiguration.get().getMaxRecords();
+    }
+
     public boolean hasConfigurePermission() {
         return job.hasPermission(BuildParameterHistoryPermissions.CONFIGURE);
     }

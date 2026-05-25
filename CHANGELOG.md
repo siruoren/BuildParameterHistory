@@ -5,7 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
-## [1.0.2] - 2026-05-20
+## [1.0.2] - 2026-05-25
+
+### Added
+- **Job-level max records configuration**: Added per-job configuration option for maximum records
+  - Created `BuildParameterHistoryJobProperty` class extending `JobProperty`
+  - Added job configuration page (`config.jelly`) for UI
+  - Each job can now have its own max records setting, independent of global configuration
+  - When job setting is empty/null, falls back to global configuration value
+  - Updated `BuildParameterHistoryService.getMaxRecords(Job)` to support job-level override
+  - Updated `BuildParameterListener` to pass job-specific max records when saving/updating records
+  - Added `BuildParameterHistoryAction` methods to expose job-level config info to UI
+  - Added i18n support for job configuration UI elements
+  - Display current effective max records and its source (Job setting/Global setting) on history page
+
+### Changed
+- `trimOldRecords()` now accepts maxRecords parameter instead of reading from global config
+- Updated `saveRecord()` and `updateRecord()` overloads to accept maxRecords parameter
+
+## [1.0.1] - 2026-05-20
 
 ### Fixed
 - **选择计数显示异常**：修复在历史页面勾选多个条目时，选择栏始终显示"已选择 0 项"的问题
