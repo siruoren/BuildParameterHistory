@@ -182,4 +182,4 @@ MIT License - 详见 LICENSE 文件
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/chart?repos=siruoren/BuildParameterHistory&type=date&legend=top-left)](https://www.star-history.com/?repos=siruoren%2FBuildParameterHistory&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/chart?repos=devpassops/JksBuildParaHistory&type=date&legend=top-left)](https://www.star-history.com/?repos=devpassops%2FJksBuildParaHistory&type=date&legend=top-left)
